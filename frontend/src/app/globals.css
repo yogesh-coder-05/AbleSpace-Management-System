@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent-color: #0088ff;
+  --accent-hover: #0066cc;
+  --bg-primary: #f8fafc;
+  --card-bg: #ffffff;
+  --text-primary: #0f172a;
+  --border-color: #e2e8f0;
+}
+
+.dark {
+  --bg-primary: #090d16;
+  --card-bg: #131b2e;
+  --text-primary: #f8fafc;
+  --border-color: #1e293b;
+}
+
+/* Color Accent Swatches */
+[data-color-mode='amber'] {
+  --accent-color: #f59e0b;
+  --accent-hover: #d97706;
+}
+
+[data-color-mode='blue'] {
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+}
+
+[data-color-mode='pink'] {
+  --accent-color: #ec4899;
+  --accent-hover: #db2777;
+}
+
+[data-color-mode='rose'] {
+  --accent-color: #f43f5e;
+  --accent-hover: #e11d48;
+}
+
+[data-color-mode='emerald'] {
+  --accent-color: #10b981;
+  --accent-hover: #059669;
+}
+
+[data-color-mode='black'] {
+  --accent-color: #18181b;
+  --accent-hover: #09090b;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.accent-bg {
+  background-color: var(--accent-color);
+}
+
+.accent-text {
+  color: var(--accent-color);
+}
+
+.accent-border {
+  border-color: var(--accent-color);
+}
