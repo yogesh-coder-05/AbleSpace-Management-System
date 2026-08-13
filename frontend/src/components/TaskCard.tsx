@@ -33,28 +33,10 @@ const CustomAvatar: React.FC<{ name?: string }> = ({ name }) => {
     );
   }
 
-  // Default Admin Avatar matching exact Figma screenshot illustration (glasses character with pinkish/purple background)
+  // Default Avatar image matching uploaded character
   return (
-    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-white/20 shadow-sm">
-      <svg className="w-full h-full text-white" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="16" fill="url(#avatar_grad_card)" />
-        <defs>
-          <linearGradient id="avatar_grad_card" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#6366F1" />
-            <stop offset="0.5" stopColor="#A855F7" />
-            <stop offset="1" stopColor="#EC4899" />
-          </linearGradient>
-        </defs>
-
-        {/* Character head */}
-        <circle cx="16" cy="13.5" r="6.5" fill="#FCE7F3" />
-        {/* Glasses */}
-        <rect x="11.5" y="11.5" width="4" height="3" rx="1" fill="#1E1B4B" />
-        <rect x="16.5" y="11.5" width="4" height="3" rx="1" fill="#1E1B4B" />
-        <line x1="14.5" y1="13" x2="16.5" y2="13" stroke="#1E1B4B" strokeWidth="1" />
-        {/* Torso */}
-        <path d="M9 27c0-4 3.1-6.5 7-6.5s7 2.5 7 6.5" fill="#312E81" />
-      </svg>
+    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 ring-1 ring-white/20 shadow-sm">
+      <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
     </div>
   );
 };
@@ -65,10 +47,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onCardClick }) => {
     ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
     : '29 Jul';
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', task._id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       onClick={() => onCardClick(task)}
-      className="group bg-[#FFFFFF] dark:bg-zinc-900 rounded-[8px] p-3 border border-[#E5E5E5] dark:border-zinc-800 shadow-none hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-3 font-sans w-full max-w-[273px] selection:bg-zinc-200"
+      className="group bg-[#FFFFFF] dark:bg-zinc-900 rounded-[8px] p-3 border border-[#E5E5E5] dark:border-zinc-800 shadow-none hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-grab active:cursor-grabbing hover:shadow-sm space-y-3 font-sans w-full max-w-[273px] selection:bg-zinc-200 active:scale-[0.98] duration-150"
     >
       {/* Title Row with 3-Dots (Figma: width 247px, height 20px, justify-content space-between, text-sm, #171717) */}
       <div className="flex items-center justify-between gap-2 h-5 w-full">

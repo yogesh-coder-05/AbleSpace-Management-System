@@ -63,3 +63,13 @@ export interface UserProfile {
   theme: ThemeMode;
   colorMode: ColorMode;
 }
+
+export interface VisibleFields {
+  priority: boolean;
+  members: boolean;
+  dueDate: boolean;
+  membersAlt?: boolean;
+  labels: boolean;
+  status: boolean;
+  reporter: boolean;
+}

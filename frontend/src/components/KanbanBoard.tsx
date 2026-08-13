@@ -9,9 +9,17 @@ interface KanbanBoardProps {
   tasks: Task[];
   onCardClick: (task: Task) => void;
   onAddTaskClick: (status?: TaskStatus) => void;
+  onTaskStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
 }
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, onCardClick, onAddTaskClick }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({
+  tasks,
+  onCardClick,
+  onAddTaskClick,
+  onTaskStatusChange,
+}) => {
+  const [dragOverCol, setDragOverCol] = React.useState<TaskStatus | null>(null);
+
   const columns: { status: TaskStatus; title: string }[] = [
     { status: 'todo', title: 'To Do' },
     { status: 'doing', title: 'Doing' },
@@ -19,15 +27,44 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, onCardClick, on
     { status: 'on_hold', title: 'On Hold' },
   ];
 
+  const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== status) {
+      setDragOverCol(status);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverCol(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: TaskStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && onTaskStatusChange) {
+      onTaskStatusChange(taskId, newStatus);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 items-start font-sans selection:bg-zinc-200">
       {columns.map((col) => {
         const colTasks = tasks.filter((t) => t.status === col.status);
+        const isTarget = dragOverCol === col.status;
 
         return (
           <div
             key={col.status}
-            className="flex flex-col w-full max-w-[289px] mx-auto shrink-0 bg-[#F5F5F5] dark:bg-zinc-900/60 rounded-[8px] border border-[#E5E5E5] dark:border-zinc-800 px-2 pb-2 space-y-2"
+            onDragOver={(e) => handleDragOver(e, col.status)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, col.status)}
+            className={`flex flex-col w-full max-w-[289px] mx-auto shrink-0 bg-[#F5F5F5] dark:bg-zinc-900/60 rounded-[8px] border transition-all duration-200 px-2 pb-2 space-y-2 ${isTarget
+                ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/20'
+                : 'border-[#E5E5E5] dark:border-zinc-800'
+              }`}
           >
             {/* Column Header: Fixed 39px height, space-between matching Figma specs */}
             <div className="h-[39px] flex items-center justify-between px-1 shrink-0">
