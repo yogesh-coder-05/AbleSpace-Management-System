@@ -7,6 +7,9 @@ import { GuestProvider } from '../context/GuestContext';
 export const metadata = {
   title: 'AbleSpace Task Management Dashboard',
   description: 'Full Stack Task Management Web Application matched 100% with Figma specs',
+  icons: {
+    icon: '/avatar.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

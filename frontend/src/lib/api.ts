@@ -38,9 +38,41 @@ export const fetchTasksApi = async (params: {
 }): Promise<Task[]> => {
   try {
     const res = await api.get('/tasks', { params });
-    return res.data;
+    let list: Task[] = res.data;
+    if (params.search) {
+      const q = params.search.toLowerCase().trim();
+      list = list.filter((t) => {
+        const titleMatch = t.title ? t.title.toLowerCase().includes(q) : false;
+        const descMatch = t.description ? t.description.toLowerCase().includes(q) : false;
+        const labelMatch = t.labels ? t.labels.some((l) => l.toLowerCase().includes(q)) : false;
+        const assigneeMatch = t.assigneeName ? t.assigneeName.toLowerCase().includes(q) : false;
+        const priorityMatch = t.priority ? t.priority.toLowerCase().includes(q) : false;
+        const statusMatch = t.status ? t.status.toLowerCase().includes(q) : false;
+        return titleMatch || descMatch || labelMatch || assigneeMatch || priorityMatch || statusMatch;
+      });
+    }
+    if (params.priority && params.priority !== 'all') {
+      list = list.filter((t) => t.priority?.toLowerCase() === params.priority?.toLowerCase());
+    }
+    return list;
   } catch (err) {
-    return getFallbackTasks();
+    let fallback = getFallbackTasks();
+    if (params.search) {
+      const q = params.search.toLowerCase().trim();
+      fallback = fallback.filter((t) => {
+        const titleMatch = t.title ? t.title.toLowerCase().includes(q) : false;
+        const descMatch = t.description ? t.description.toLowerCase().includes(q) : false;
+        const labelMatch = t.labels ? t.labels.some((l) => l.toLowerCase().includes(q)) : false;
+        const assigneeMatch = t.assigneeName ? t.assigneeName.toLowerCase().includes(q) : false;
+        const priorityMatch = t.priority ? t.priority.toLowerCase().includes(q) : false;
+        const statusMatch = t.status ? t.status.toLowerCase().includes(q) : false;
+        return titleMatch || descMatch || labelMatch || assigneeMatch || priorityMatch || statusMatch;
+      });
+    }
+    if (params.priority && params.priority !== 'all') {
+      fallback = fallback.filter((t) => t.priority?.toLowerCase() === params.priority?.toLowerCase());
+    }
+    return fallback;
   }
 };
 

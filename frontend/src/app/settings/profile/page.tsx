@@ -108,8 +108,8 @@ export default function ProfileSettingsPage() {
             
             {/* Avatar Header */}
             <div className="flex items-center gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="w-16 h-16 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xl shadow-lg">
-                {name ? name.substring(0, 2).toUpperCase() : 'DX'}
+              <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg shrink-0 border-2 border-indigo-500/20">
+                <img src="/avatar.png" alt="User Avatar" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{name}</h3>
