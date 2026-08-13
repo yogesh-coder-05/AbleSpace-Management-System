@@ -1,9 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CheckSquare, FolderKanban, Settings, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { useColorMode } from '../context/ColorModeContext';
+import { ColorMode } from '../types/task';
+import {
+  CheckSquare,
+  FolderKanban,
+  Settings as SettingsIcon,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUpDown,
+  X,
+  Sun,
+  Moon,
+  Square,
+  Check,
+} from 'lucide-react';
 import { useGuest } from '../context/GuestContext';
 
 interface SidebarProps {
@@ -21,6 +36,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const { user } = useGuest();
+  const { theme, toggleTheme } = useTheme();
+  const { colorMode, setColorMode } = useColorMode();
+
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
+  const [showColorSubmenu, setShowColorSubmenu] = useState(false);
+
+  const colorOptions: { mode: ColorMode; label: string; colorClass: string }[] = [
+    { mode: 'amber', label: 'Amber', colorClass: 'bg-[#D97706]' },
+    { mode: 'blue', label: 'Blue', colorClass: 'bg-[#7C3AED]' },
+    { mode: 'pink', label: 'Pink', colorClass: 'bg-[#DB2777]' },
+    { mode: 'rose', label: 'Rose', colorClass: 'bg-[#E11D48]' },
+    { mode: 'emerald', label: 'Emerald', colorClass: 'bg-[#059669]' },
+    { mode: 'black', label: 'Black', colorClass: 'bg-zinc-900 dark:bg-zinc-100' },
+  ];
 
   return (
     <>
@@ -38,30 +68,184 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="space-y-6">
-          
+
           {/* User Profile Selector Header matching Figma screenshot */}
-          <div className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-purple-100 dark:ring-purple-950">
-                {user?.name ? user.name.substring(0, 2).toUpperCase() : 'DX'}
+          <div className="relative">
+            <div
+              onClick={() => {
+                setShowProfileMenu(!showProfileMenu);
+                setShowThemeSubmenu(false);
+                setShowColorSubmenu(false);
+              }}
+              className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-purple-100 dark:ring-purple-950 overflow-hidden shrink-0">
+                  <img src="/avatar.png" alt="User Avatar" className="w-full h-full object-cover" />
+                </div>
+                <span className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight">
+                  {user?.name || 'Dexter'}
+                </span>
               </div>
-              <span className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight">
-                {user?.name || 'Dexter'}
-              </span>
+
+              <div className="flex items-center gap-1">
+                <ChevronsUpDown className="w-4 h-4 text-zinc-400" />
+                {/* Close Button on Mobile */}
+                {onCloseMobile && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCloseMobile();
+                    }}
+                    className="p-1 md:hidden text-zinc-400 hover:text-zinc-700 dark:hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
-            
-            <div className="flex items-center gap-1">
-              <ChevronsUpDown className="w-4 h-4 text-zinc-400" />
-              {/* Close Button on Mobile */}
-              {onCloseMobile && (
-                <button
-                  onClick={onCloseMobile}
-                  className="p-1 md:hidden text-zinc-400 hover:text-zinc-700 dark:hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+
+            {/* Profile Popover Menu Card matching exact Figma screenshot */}
+            {showProfileMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    setShowThemeSubmenu(false);
+                    setShowColorSubmenu(false);
+                  }}
+                />
+                <div className="absolute top-14 left-0 w-[240px] h-[266px] min-w-[192px] bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans flex flex-col justify-between">
+                  
+                  {/* Centered Avatar Image & Email matching Figma screenshot */}
+                  <div className="flex flex-col items-center justify-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-xs border border-zinc-200 dark:border-zinc-700 mb-2">
+                      <img src="/avatar.png" alt="Dexter Avatar" className="w-full h-full object-cover" />
+                    </div>
+                    <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">
+                      {user?.name || 'Dexter'}
+                    </h4>
+                    <p className="text-[11px] text-zinc-400 font-normal mt-0.5">
+                      {user?.email || 'Dexter@gmail.com'}
+                    </p>
+                  </div>
+
+                  {/* Menu Options matching Figma screenshot */}
+                  <div className="pt-2 space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    
+                    {/* Change Theme Item with Responsive Submenu */}
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          setShowThemeSubmenu(!showThemeSubmenu);
+                          setShowColorSubmenu(false);
+                        }}
+                        className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Sun className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                          <span>Change Theme</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                      </button>
+
+                      {/* Theme Submenu Card - 100% Responsive */}
+                      {showThemeSubmenu && (
+                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                          <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
+                            Theme
+                          </p>
+                          <div className="space-y-1">
+                            <button
+                              onClick={() => {
+                                if (theme !== 'light') toggleTheme();
+                                setShowThemeSubmenu(false);
+                              }}
+                              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-900 dark:text-white transition"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Sun className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                                <span>Light</span>
+                              </div>
+                              {theme === 'light' && <Check className="w-4 h-4 text-zinc-900 dark:text-white" />}
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (theme !== 'dark') toggleTheme();
+                                setShowThemeSubmenu(false);
+                              }}
+                              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-900 dark:text-white transition"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Moon className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                                <span>Dark</span>
+                              </div>
+                              {theme === 'dark' && <Check className="w-4 h-4 text-zinc-900 dark:text-white" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Color Mode Item with Responsive Submenu */}
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          setShowColorSubmenu(!showColorSubmenu);
+                          setShowThemeSubmenu(false);
+                        }}
+                        className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Square className="w-4 h-4 text-zinc-900 dark:text-white fill-current" />
+                          <span>Color Mode</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                      </button>
+
+                      {/* Color Mode Submenu Card - 100% Responsive */}
+                      {showColorSubmenu && (
+                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                          <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
+                            Color Mode
+                          </p>
+                          <div className="space-y-1">
+                            {colorOptions.map((opt) => (
+                              <button
+                                key={opt.mode}
+                                onClick={() => {
+                                  setColorMode(opt.mode);
+                                  setShowColorSubmenu(false);
+                                }}
+                                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-900 dark:text-white transition"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span className={`w-4 h-4 rounded-[4px] shrink-0 ${opt.colorClass}`} />
+                                  <span>{opt.label}</span>
+                                </div>
+                                {colorMode === opt.mode && <Check className="w-4 h-4 text-zinc-900 dark:text-white" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Settings Item */}
+                    <Link
+                      href="/settings/profile"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-zinc-700 dark:text-zinc-300"
+                    >
+                      <SettingsIcon className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                      <span>Settings</span>
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Workspace Navigation Section matching Figma screenshot */}
@@ -77,11 +261,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (onSelectProject) onSelectProject(null);
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                pathname === '/' && !selectedProjectId
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${!selectedProjectId || selectedProjectId !== 'projects_view'
                   ? 'bg-[#F4F4F6] text-zinc-900 dark:bg-zinc-800 dark:text-white font-semibold shadow-sm'
                   : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
-              }`}
+                }`}
             >
               <CheckSquare className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
               <span>Tasks</span>
@@ -89,14 +272,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={() => {
-                if (onSelectProject) onSelectProject('proj_1');
+                if (onSelectProject) onSelectProject('projects_view');
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                selectedProjectId
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${selectedProjectId === 'projects_view'
                   ? 'bg-[#F4F4F6] text-zinc-900 dark:bg-zinc-800 dark:text-white font-semibold shadow-sm'
                   : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
-              }`}
+                }`}
             >
               <FolderKanban className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
               <span>Projects</span>
@@ -111,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => onCloseMobile && onCloseMobile()}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
           >
-            <Settings className="w-4 h-4 text-zinc-500" />
+            <SettingsIcon className="w-4 h-4 text-zinc-500" />
             <span>Settings</span>
           </Link>
         </div>
