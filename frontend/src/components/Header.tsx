@@ -25,6 +25,7 @@ import {
   Building2,
   Tag,
   User,
+  LogOut,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useColorMode } from '../context/ColorModeContext';
@@ -61,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { colorMode, setColorMode } = useColorMode();
-  const { user } = useGuest();
+  const { user, logoutGuest } = useGuest();
 
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -338,7 +339,7 @@ export const Header: React.FC<HeaderProps> = ({
                           {/* Urgent */}
                           <button
                             onClick={() => {
-                              setSelectedPriority('high');
+                              setSelectedPriority('urgent');
                               setShowFilterMenu(false);
                             }}
                             className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-rose-500 font-medium transition"
@@ -347,7 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
                               <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
                               <span>Urgent</span>
                             </div>
-                            {selectedPriority === 'high' && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />}
+                            {selectedPriority === 'urgent' && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />}
                           </button>
 
                           {/* High */}
@@ -362,6 +363,7 @@ export const Header: React.FC<HeaderProps> = ({
                               <SignalHigh className="w-3.5 h-3.5 text-amber-500" />
                               <span>High</span>
                             </div>
+                            {selectedPriority === 'high' && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />}
                           </button>
 
                           {/* Medium */}

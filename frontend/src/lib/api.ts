@@ -29,6 +29,15 @@ export const guestLoginApi = async (name?: string): Promise<{ guestUserId: strin
   }
 };
 
+export const guestLogoutApi = async (guestUserId?: string): Promise<{ message: string }> => {
+  try {
+    const res = await api.post('/auth/logout', { guestUserId });
+    return res.data;
+  } catch (err) {
+    return { message: 'Logged out successfully' };
+  }
+};
+
 export const fetchTasksApi = async (params: {
   guestUserId?: string;
   search?: string;
@@ -193,40 +202,70 @@ export const fetchProjectsApi = async (guestUserId: string): Promise<Project[]> 
   }
 };
 
+export const createProjectApi = async (projectData: {
+  name: string;
+  priority?: string;
+  dueDate?: string;
+  guestUserId?: string;
+}): Promise<Project> => {
+  try {
+    const res = await api.post('/projects', projectData);
+    return res.data;
+  } catch (err) {
+    return {
+      _id: `proj_${Date.now()}`,
+      name: projectData.name,
+      priority: (projectData.priority as TaskPriority) || 'medium',
+      leadName: 'Dexter',
+      dueDate: projectData.dueDate || '2026-12-30',
+      guestUserId: projectData.guestUserId || 'guest_demo',
+    };
+  }
+};
+
+export const deleteProjectApi = async (id: string): Promise<void> => {
+  try {
+    await api.delete(`/projects/${id}`);
+  } catch (err) {
+    console.warn('Delete project API error:', err);
+  }
+};
+
 function getFallbackTasks(): Task[] {
   return [
+    // --- TO DO TASKS ---
     {
       _id: 't_1',
-      title: 'Write API Documentation',
-      description: 'Create clear and detailed API documentation for public developers in Node/Express/NestJS ecosystem.',
+      title: 'Design Homepage',
+      description: 'Create responsive landing page mockups and Figma design components.',
       status: 'todo',
       priority: 'high',
-      labels: ['Research', 'Design', 'Development', 'Testing', 'Deployment'],
+      labels: ['Design', 'Research'],
       dueDate: '2026-09-12',
       assigneeName: 'Dexter',
+      projectId: 'proj_1',
       subtasks: [
-        { id: 's1', title: 'Subtask 1', priority: 'high', dueDate: '2026-09-12', assigneeName: 'Dexter' },
-        { id: 's2', title: 'Subtask 2', priority: 'low', dueDate: '2026-09-15', assigneeName: 'Dexter' },
-        { id: 's3', title: 'Subtask 3', priority: 'medium', dueDate: '2026-09-18', assigneeName: 'Dexter' },
+        { id: 's1', title: 'Header Wireframe', priority: 'high', dueDate: '2026-09-12', assigneeName: 'Dexter' },
+        { id: 's2', title: 'Footer Links', priority: 'low', dueDate: '2026-09-15', assigneeName: 'Dexter' },
       ],
       updates: [
-        { id: 'u1', text: 'You changed priority from No Priority to High', createdAt: '2026-08-10T12:00:00Z' },
-        { id: 'u2', text: 'You added an update - Aug 10th', createdAt: '2026-08-10T12:10:00Z' },
+        { id: 'u1', text: 'Task created for Design Homepage', createdAt: '2026-08-10T12:00:00Z' },
       ],
       comments: [
-        { id: 'c1', text: 'Draft documentation structure reviewed by lead.', authorName: 'Sarah', createdAt: '2026-08-10T12:05:00Z' },
+        { id: 'c1', text: 'Initial design direction approved.', authorName: 'Sarah', createdAt: '2026-08-10T12:05:00Z' },
       ],
       guestUserId: 'guest_demo',
     },
     {
       _id: 't_2',
-      title: 'Implement Search Function',
-      description: 'Add real-time filter search bar across Kanban board and table list views.',
+      title: 'Develop Login Feature',
+      description: 'Build JWT authentication and guest user login session handler.',
       status: 'todo',
-      priority: 'medium',
-      labels: ['Development', 'Deployment'],
+      priority: 'low',
+      labels: ['Development'],
       dueDate: '2026-09-15',
       assigneeName: 'Dexter',
+      projectId: 'proj_2',
       subtasks: [],
       updates: [],
       comments: [],
@@ -234,27 +273,31 @@ function getFallbackTasks(): Task[] {
     },
     {
       _id: 't_3',
-      title: 'Deploy to Production',
-      description: 'Setup Vercel frontend & Render backend deployment pipelines.',
+      title: 'Test Payment Gateway',
+      description: 'Integrate Stripe sandbox API and test checkout webhook callbacks.',
       status: 'todo',
-      priority: 'low',
-      labels: ['Deployment'],
+      priority: 'medium',
+      labels: ['Testing', 'Deployment'],
       dueDate: '2026-09-18',
       assigneeName: 'Dexter',
+      projectId: 'proj_3',
       subtasks: [],
       updates: [],
       comments: [],
       guestUserId: 'guest_demo',
     },
+
+    // --- DOING TASKS ---
     {
       _id: 't_4',
-      title: 'Code Review: Completed',
-      description: 'Audit pull request code quality and DTO validations.',
+      title: 'Design Homepage',
+      description: 'Refining hero header animations and dark theme color palette.',
       status: 'doing',
       priority: 'high',
-      labels: ['Testing'],
+      labels: ['Design'],
       dueDate: '2026-09-12',
       assigneeName: 'Dexter',
+      projectId: 'proj_1',
       subtasks: [],
       updates: [],
       comments: [],
@@ -262,13 +305,14 @@ function getFallbackTasks(): Task[] {
     },
     {
       _id: 't_5',
-      title: 'Design Mockups Finalised',
-      description: 'Figma screen designs verified against desktop and mobile breakpoints.',
+      title: 'Develop Login Feature',
+      description: 'Connecting frontend login modal with NestJS auth endpoints.',
       status: 'doing',
-      priority: 'high',
-      labels: ['Design'],
+      priority: 'low',
+      labels: ['Development'],
       dueDate: '2026-09-15',
       assigneeName: 'Dexter',
+      projectId: 'proj_2',
       subtasks: [],
       updates: [],
       comments: [],
@@ -276,27 +320,31 @@ function getFallbackTasks(): Task[] {
     },
     {
       _id: 't_6',
-      title: 'Product Testing Passed',
-      description: 'Verify end-to-end task creation, status drag-and-drop, and theme switching.',
-      status: 'completed',
+      title: 'Test Payment Gateway',
+      description: 'Executing unit tests for payment success and failure flows.',
+      status: 'doing',
       priority: 'medium',
       labels: ['Testing'],
-      dueDate: '2026-09-10',
+      dueDate: '2026-09-18',
       assigneeName: 'Dexter',
+      projectId: 'proj_3',
       subtasks: [],
       updates: [],
       comments: [],
       guestUserId: 'guest_demo',
     },
+
+    // --- COMPLETED TASKS ---
     {
       _id: 't_7',
-      title: 'UI Design Updates',
-      description: 'Apply glassmorphic cards and smooth theme transition styles.',
+      title: 'Design Homepage',
+      description: 'Initial design wireframes approved by product manager.',
       status: 'completed',
-      priority: 'low',
+      priority: 'high',
       labels: ['Design'],
-      dueDate: '2026-09-11',
+      dueDate: '2026-09-12',
       assigneeName: 'Dexter',
+      projectId: 'proj_1',
       subtasks: [],
       updates: [],
       comments: [],
@@ -304,13 +352,29 @@ function getFallbackTasks(): Task[] {
     },
     {
       _id: 't_8',
-      title: 'Security Audit Settlement',
-      description: 'Enforce strict CORS and input validation pipes.',
+      title: 'Develop Login Feature',
+      description: 'Database user schema created with password hashing.',
       status: 'completed',
-      priority: 'high',
+      priority: 'low',
       labels: ['Development'],
-      dueDate: '2026-09-08',
+      dueDate: '2026-09-15',
       assigneeName: 'Dexter',
+      projectId: 'proj_2',
+      subtasks: [],
+      updates: [],
+      comments: [],
+      guestUserId: 'guest_demo',
+    },
+    {
+      _id: 't_9',
+      title: 'Test Payment Gateway',
+      description: 'API key secret credentials safely configured in environment vars.',
+      status: 'completed',
+      priority: 'medium',
+      labels: ['Deployment'],
+      dueDate: '2026-09-18',
+      assigneeName: 'Dexter',
+      projectId: 'proj_3',
       subtasks: [],
       updates: [],
       comments: [],

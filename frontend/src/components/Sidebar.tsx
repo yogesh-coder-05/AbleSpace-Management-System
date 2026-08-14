@@ -18,11 +18,12 @@ import {
   Moon,
   Square,
   Check,
+  LogOut,
 } from 'lucide-react';
 import { useGuest } from '../context/GuestContext';
 
 interface SidebarProps {
-  onSelectProject?: (projId: string | null) => void;
+  onSelectProject?: (projId: string | null, name?: string | null) => void;
   selectedProjectId?: string | null;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
@@ -35,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const pathname = usePathname();
-  const { user } = useGuest();
+  const { user, logoutGuest } = useGuest();
   const { theme, toggleTheme } = useTheme();
   const { colorMode, setColorMode } = useColorMode();
 
@@ -105,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Profile Popover Menu Card matching exact Figma screenshot */}
+            {/* Profile Popover Menu Card */}
             {showProfileMenu && (
               <>
                 <div
@@ -116,9 +117,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setShowColorSubmenu(false);
                   }}
                 />
-                <div className="absolute top-14 left-0 w-[240px] h-[266px] min-w-[192px] bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans flex flex-col justify-between">
+                <div className="absolute top-full left-0 mt-1.5 w-full min-w-[220px] bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-sans space-y-3">
                   
-                  {/* Centered Avatar Image & Email matching Figma screenshot */}
+                  {/* Centered Avatar Image & Email */}
                   <div className="flex flex-col items-center justify-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
                     <div className="w-12 h-12 rounded-full overflow-hidden shadow-xs border border-zinc-200 dark:border-zinc-700 mb-2">
                       <img src="/avatar.png" alt="Dexter Avatar" className="w-full h-full object-cover" />
@@ -131,10 +132,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </p>
                   </div>
 
-                  {/* Menu Options matching Figma screenshot */}
-                  <div className="pt-2 space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  {/* Menu Options */}
+                  <div className="space-y-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                     
-                    {/* Change Theme Item with Responsive Submenu */}
+                    {/* Change Theme Item with Submenu */}
                     <div className="relative">
                       <button
                         onClick={() => {
@@ -150,9 +151,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                       </button>
 
-                      {/* Theme Submenu Card - 100% Responsive */}
+                      {/* Theme Submenu Card */}
                       {showThemeSubmenu && (
-                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
                           <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                             Theme
                           </p>
@@ -189,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       )}
                     </div>
 
-                    {/* Color Mode Item with Responsive Submenu */}
+                    {/* Color Mode Item with Submenu */}
                     <div className="relative">
                       <button
                         onClick={() => {
@@ -205,9 +206,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                       </button>
 
-                      {/* Color Mode Submenu Card - 100% Responsive */}
+                      {/* Color Mode Submenu Card */}
                       {showColorSubmenu && (
-                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
                           <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                             Color Mode
                           </p>
@@ -248,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Workspace Navigation Section matching Figma screenshot */}
+          {/* Workspace Navigation Section */}
           <div className="space-y-1">
             <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               <span>Workspace</span>
@@ -284,18 +285,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>Projects</span>
             </button>
           </div>
-        </div>
-
-        {/* Footer Settings Link */}
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
-          <Link
-            href="/settings/profile"
-            onClick={() => onCloseMobile && onCloseMobile()}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-          >
-            <SettingsIcon className="w-4 h-4 text-zinc-500" />
-            <span>Settings</span>
-          </Link>
         </div>
       </aside>
     </>

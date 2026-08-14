@@ -18,9 +18,10 @@ export default function DashboardPage() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | 'all'>('all');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null);
 
   const [visibleFields, setVisibleFields] = useState<VisibleFields>({
     priority: true,
@@ -43,7 +44,7 @@ export default function DashboardPage() {
         guestUserId: guestUserId || undefined,
         search: searchQuery || undefined,
         priority: selectedPriority !== 'all' ? selectedPriority : undefined,
-        projectId: selectedProjectId || undefined,
+        projectId: (selectedProjectId && selectedProjectId !== 'projects_view') ? selectedProjectId : undefined,
       });
       setTasks(data);
     } catch (err) {
@@ -56,6 +57,23 @@ export default function DashboardPage() {
       loadTasks();
     }
   }, [guestUserId, searchQuery, selectedPriority, selectedProjectId, isGuestLoading]);
+
+  const handleSelectProject = (id: string | null, name?: string | null) => {
+    setSelectedProjectId(id);
+    if (name) {
+      setSelectedProjectName(name);
+    } else if (id === 'projects_view') {
+      setSelectedProjectName('Projects');
+    } else if (id) {
+      setSelectedProjectName('Design Homepage');
+    } else {
+      setSelectedProjectName(null);
+    }
+    setSelectedTask(null);
+    if (id && id !== 'projects_view') {
+      setViewMode('list');
+    }
+  };
 
   const handleOpenCreateModal = (status: TaskStatus = 'todo') => {
     setCreateModalStatus(status);
@@ -76,6 +94,11 @@ export default function DashboardPage() {
   };
 
   const displayTasks = tasks.filter((t) => {
+    if (selectedProjectId && selectedProjectId !== 'projects_view') {
+      if (t.projectId && t.projectId !== selectedProjectId) {
+        return false;
+      }
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const titleMatch = t.title ? t.title.toLowerCase().includes(q) : false;
@@ -97,19 +120,17 @@ export default function DashboardPage() {
     return true;
   });
 
+  if (!isGuestLoading && !guestUserId) {
+    return <GuestLoginModal />;
+  }
+
   return (
     <div className="min-h-screen flex bg-white dark:bg-zinc-950 font-sans selection:bg-zinc-200">
       
-      {/* Show Guest Login Modal if no guest session active */}
-      {!isGuestLoading && !guestUserId && <GuestLoginModal />}
-
       {/* Main Sidebar (Responsive Collapsible Drawer on Mobile) */}
       <Sidebar
         selectedProjectId={selectedProjectId}
-        onSelectProject={(id) => {
-          setSelectedProjectId(id);
-          setSelectedTask(null);
-        }}
+        onSelectProject={(id, name) => handleSelectProject(id, name)}
         isOpenMobile={isSidebarOpenMobile}
         onCloseMobile={() => setIsSidebarOpenMobile(false)}
       />
@@ -135,7 +156,7 @@ export default function DashboardPage() {
               selectedPriority={selectedPriority}
               setSelectedPriority={setSelectedPriority}
               onAddTaskClick={() => handleOpenCreateModal('todo')}
-              selectedProjectName={selectedProjectId === 'projects_view' ? 'Projects' : selectedProjectId ? 'Design Homepage' : null}
+              selectedProjectName={selectedProjectName}
               onToggleSidebar={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
               visibleFields={visibleFields}
               setVisibleFields={setVisibleFields}
@@ -145,9 +166,7 @@ export default function DashboardPage() {
             <main className="flex-1 overflow-x-auto overflow-y-auto">
               {selectedProjectId === 'projects_view' ? (
                 <ProjectsView
-                  onSelectProject={(id, name) => {
-                    setSelectedProjectId(id);
-                  }}
+                  onSelectProject={(id, name) => handleSelectProject(id, name)}
                 />
               ) : viewMode === 'board' ? (
                 <KanbanBoard

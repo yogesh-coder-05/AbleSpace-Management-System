@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task, TaskPriority, TaskStatus } from '../types/task';
 import {
   Lock,
@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   PanelRight,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   ChevronLeft,
   ArrowRight,
@@ -25,7 +26,8 @@ import {
   ArrowLeft,
   MessageSquare,
 } from 'lucide-react';
-import { updateTaskApi } from '../lib/api';
+import { updateTaskApi, addSubtaskApi, addCommentApi } from '../lib/api';
+import { SubtaskItem, CommentItem } from '../types/task';
 
 interface TaskDetailPageProps {
   task: Task;
@@ -51,10 +53,18 @@ const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
       </div>
     );
   }
+  if (p === 'low') {
+    return (
+      <div className="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-zinc-400">
+        <SignalLow className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-400 shrink-0" />
+        <span className="capitalize">Low</span>
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-zinc-500">
-      <SignalLow className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
-      <span className="capitalize">{priority || 'Low'}</span>
+    <div className="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-zinc-400">
+      <SignalLow className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-400 shrink-0" />
+      <span>No Priority</span>
     </div>
   );
 };
@@ -69,10 +79,16 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(10);
+  const [selectedDay, setSelectedDay] = useState(12);
 
-  const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState(task.comments || [
+  const [isSubtasksOpen, setIsSubtasksOpen] = useState(true);
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [subtaskList, setSubtaskList] = useState<SubtaskItem[]>([]);
+
+  const [replyText, setReplyText] = useState('');
+  const [mainCommentText, setMainCommentText] = useState('');
+  const [comments, setComments] = useState<CommentItem[]>(task.comments || [
     {
       id: 'c_1',
       authorName: 'Ankit Dutta',
@@ -81,14 +97,42 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
     },
   ]);
 
+  useEffect(() => {
+    if (task) {
+      if (task.priority) setCurrentPriority(task.priority);
+      if (task.status) setCurrentStatus(task.status);
+      if (task.dueDate) {
+        const d = new Date(task.dueDate);
+        if (!isNaN(d.getTime())) {
+          setSelectedDay(d.getDate());
+        }
+      }
+      if (task.comments && task.comments.length > 0) {
+        setComments(task.comments);
+      }
+      if (task.subtasks && task.subtasks.length > 0) {
+        setSubtaskList(task.subtasks);
+      } else {
+        setSubtaskList([
+          { id: 'sub_1', title: 'Subtask 1', priority: 'high', dueDate: '12 Sep 2026', assigneeName: 'Dexter' },
+          { id: 'sub_2', title: 'Subtask 2', priority: 'low', dueDate: '15 Sep 2026', assigneeName: 'CN' },
+          { id: 'sub_3', title: 'Subtask 3', priority: 'medium', dueDate: '18 Sep 2026', assigneeName: '' },
+        ]);
+      }
+    }
+  }, [task]);
+
   const handlePriorityChange = async (p: TaskPriority) => {
     setCurrentPriority(p);
     setShowPriorityMenu(false);
     try {
-      await updateTaskApi(task._id, { priority: p });
+      const res = await updateTaskApi(task._id, { priority: p });
+      if (res && res.priority) {
+        setCurrentPriority(res.priority);
+      }
       onRefresh();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to update priority:', err);
     }
   };
 
@@ -99,20 +143,89 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
       await updateTaskApi(task._id, { status: s });
       onRefresh();
     } catch (err) {
-      console.error(err);
+      console.error('Failed to update status:', err);
     }
   };
 
-  const handleAddComment = () => {
-    if (!commentText.trim()) return;
-    const newComment = {
+  const handleDateChange = async (day: number) => {
+    setSelectedDay(day);
+    setShowDatePicker(false);
+    const updatedDate = new Date(2026, 8, day).toISOString();
+    try {
+      const res = await updateTaskApi(task._id, { dueDate: updatedDate });
+      if (res && res.dueDate) {
+        const d = new Date(res.dueDate);
+        if (!isNaN(d.getTime())) {
+          setSelectedDay(d.getDate());
+        }
+      }
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to update due date:', err);
+    }
+  };
+
+  const handleAddSubtaskSubmit = async () => {
+    if (!newSubtaskTitle.trim()) return;
+    const titleToAdd = newSubtaskTitle.trim();
+    setNewSubtaskTitle('');
+    setIsAddingSubtask(false);
+
+    try {
+      const updatedTask = await addSubtaskApi(task._id, { title: titleToAdd });
+      if (updatedTask && updatedTask.subtasks) {
+        setSubtaskList(updatedTask.subtasks);
+      } else {
+        setSubtaskList((prev) => [
+          ...prev,
+          {
+            id: `sub_${Date.now()}`,
+            title: titleToAdd,
+            priority: 'medium',
+            dueDate: '18 Sep 2026',
+            assigneeName: 'Dexter',
+          },
+        ]);
+      }
+      onRefresh();
+    } catch (err) {
+      setSubtaskList((prev) => [
+        ...prev,
+        {
+          id: `sub_${Date.now()}`,
+          title: titleToAdd,
+          priority: 'medium',
+          dueDate: '18 Sep 2026',
+          assigneeName: 'Dexter',
+        },
+      ]);
+    }
+  };
+
+  const submitComment = async (text: string, isMain: boolean = false) => {
+    if (!text.trim()) return;
+    const content = text.trim();
+    if (isMain) setMainCommentText('');
+    else setReplyText('');
+
+    const newCommentObj = {
       id: `c_${Date.now()}`,
       authorName: 'You',
-      text: commentText,
+      text: content,
       createdAt: 'just now',
     };
-    setComments((prev) => [...prev, newComment]);
-    setCommentText('');
+
+    setComments((prev) => [...prev, newCommentObj]);
+
+    try {
+      const updatedTask = await addCommentApi(task._id, { text: content, authorName: 'You' });
+      if (updatedTask && updatedTask.comments) {
+        setComments(updatedTask.comments);
+      }
+      onRefresh();
+    } catch (err) {
+      console.error('Comment API error:', err);
+    }
   };
 
   return (
@@ -215,85 +328,118 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
 
           {/* Subtasks Section Header & Table matching Figma screenshot */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-900 dark:text-white">
-              <ChevronDown className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
+            <button
+              type="button"
+              onClick={() => setIsSubtasksOpen(!isSubtasksOpen)}
+              className="flex items-center gap-2 text-xs font-semibold text-zinc-900 dark:text-white hover:opacity-80 transition cursor-pointer select-none"
+            >
+              {isSubtasksOpen ? (
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
+              )}
               <span>Subtasks</span>
-            </div>
+            </button>
 
             {/* Subtasks Table Container */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-zinc-600 dark:text-zinc-400">
-                  <thead className="bg-[#FAFAFA] dark:bg-zinc-800/60 text-zinc-400 font-semibold border-b border-zinc-200/60 dark:border-zinc-800">
-                    <tr>
-                      <th className="py-3 px-6 font-medium text-xs text-zinc-500 dark:text-zinc-400">Task</th>
-                      <th className="py-3 px-4 font-medium text-xs text-zinc-500 dark:text-zinc-400">Priority</th>
-                      <th className="py-3 px-4 font-medium text-xs text-zinc-500 dark:text-zinc-400">Members</th>
-                      <th className="py-3 px-4 font-medium text-xs text-zinc-500 dark:text-zinc-400">Due Date</th>
-                      <th className="py-3 px-4 text-right font-medium text-xs text-zinc-500 dark:text-zinc-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                    {/* Subtask 1 */}
-                    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
-                      <td className="py-3.5 px-6 font-medium text-zinc-900 dark:text-white text-xs">Subtask 1</td>
-                      <td className="py-3.5 px-4"><PriorityBadge priority="high" /></td>
-                      <td className="py-3.5 px-4">
-                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700">
-                          <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400">12 Sep 2026</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button className="p-1 text-zinc-400 hover:text-zinc-600"><MoreHorizontal className="w-4 h-4" /></button>
-                      </td>
-                    </tr>
+            {isSubtasksOpen && (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs overflow-hidden transition-all duration-200">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-zinc-600 dark:text-zinc-400">
+                    <thead className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold border-b border-zinc-100 dark:border-zinc-800">
+                      <tr>
+                        <th className="py-3.5 px-6 font-medium text-xs text-zinc-900 dark:text-zinc-100">Task</th>
+                        <th className="py-3.5 px-4 font-medium text-xs text-zinc-900 dark:text-zinc-100">Priority</th>
+                        <th className="py-3.5 px-4 font-medium text-xs text-zinc-900 dark:text-zinc-100">Members</th>
+                        <th className="py-3.5 px-4 font-medium text-xs text-zinc-900 dark:text-zinc-100">Due Date</th>
+                        <th className="py-3.5 px-4 text-right font-medium text-xs text-zinc-900 dark:text-zinc-100">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                      {subtaskList.map((sub, idx) => (
+                        <tr key={sub.id || idx} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
+                          <td className="py-3.5 px-6 font-medium text-zinc-900 dark:text-white text-xs">
+                            {sub.title}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <PriorityBadge priority={(sub.priority as TaskPriority) || 'medium'} />
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {sub.assigneeName === 'CN' ? (
+                              <span className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 font-bold text-[10px] text-zinc-600 dark:text-zinc-300 flex items-center justify-center">
+                                CN
+                              </span>
+                            ) : sub.assigneeName === 'Dexter' || idx === 0 ? (
+                              <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700">
+                                <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <span className="w-5 h-5 rounded-full border border-dashed border-zinc-300 text-zinc-400 flex items-center justify-center font-bold text-xs">
+                                +
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 font-normal">
+                            {sub.dueDate ? (typeof sub.dueDate === 'string' ? sub.dueDate.split('T')[0] : '12 Sep 2026') : '12 Sep 2026'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button type="button" className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
 
-                    {/* Subtask 2 */}
-                    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
-                      <td className="py-3.5 px-6 font-medium text-zinc-900 dark:text-white text-xs">Subtask 2</td>
-                      <td className="py-3.5 px-4"><PriorityBadge priority="low" /></td>
-                      <td className="py-3.5 px-4">
-                        <span className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 font-bold text-[10px] text-zinc-600 dark:text-zinc-300 flex items-center justify-center">CN</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400">15 Sep 2026</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button className="p-1 text-zinc-400 hover:text-zinc-600"><MoreHorizontal className="w-4 h-4" /></button>
-                      </td>
-                    </tr>
-
-                    {/* Subtask 3 */}
-                    <tr className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition">
-                      <td className="py-3.5 px-6 font-medium text-zinc-900 dark:text-white text-xs">Subtask 3</td>
-                      <td className="py-3.5 px-4"><PriorityBadge priority="medium" /></td>
-                      <td className="py-3.5 px-4">
-                        <span className="w-5 h-5 rounded-full border border-dashed border-zinc-300 text-zinc-400 flex items-center justify-center font-bold text-xs">+</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400">18 Sep 2026</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button className="p-1 text-zinc-400 hover:text-zinc-600"><MoreHorizontal className="w-4 h-4" /></button>
-                      </td>
-                    </tr>
-
-                    {/* Add Subtasks Row */}
-                    <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition">
-                      <td colSpan={5} className="py-2.5 px-6">
-                        <button className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Subtasks</span>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      {/* Add Subtasks Row */}
+                      <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition">
+                        <td colSpan={5} className="py-2.5 px-6">
+                          {isAddingSubtask ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={newSubtaskTitle}
+                                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtaskSubmit()}
+                                placeholder="Enter subtask title..."
+                                autoFocus
+                                className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddSubtaskSubmit}
+                                className="px-3 py-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold rounded-lg hover:opacity-90 transition cursor-pointer"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setIsAddingSubtask(false); setNewSubtaskTitle(''); }}
+                                className="px-2 py-1 text-zinc-500 hover:text-zinc-800 text-xs transition cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingSubtask(true)}
+                              className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Subtasks</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Subtasks / Comments Feed matching Figma screenshot */}
+          {/* Comments Feed */}
           <div className="space-y-4 pt-2">
-            <h3 className="text-xs font-bold text-zinc-900 dark:text-white">Subtasks</h3>
-
             {/* Existing Comment Feed */}
             {comments.map((c) => (
               <div key={c.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 space-y-2 shadow-2xs">
@@ -319,16 +465,16 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                 </div>
                 <input
                   type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && submitComment(replyText, false)}
                   placeholder="Leave a reply..."
                   className="w-full text-xs bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
-                <button className="p-1 hover:text-zinc-600 dark:hover:text-zinc-200"><Paperclip className="w-4 h-4" /></button>
-                <button onClick={handleAddComment} className="p-1 text-zinc-800 dark:text-white hover:opacity-80"><Send className="w-4 h-4" /></button>
+                <button type="button" className="p-1 hover:text-zinc-600 dark:hover:text-zinc-200"><Paperclip className="w-4 h-4" /></button>
+                <button type="button" onClick={() => submitComment(replyText, false)} className="p-1 text-zinc-800 dark:text-white hover:opacity-80 transition cursor-pointer"><Send className="w-4 h-4" /></button>
               </div>
             </div>
 
@@ -336,12 +482,15 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-4 flex items-center justify-between gap-3 shadow-2xs">
               <input
                 type="text"
+                value={mainCommentText}
+                onChange={(e) => setMainCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitComment(mainCommentText, true)}
                 placeholder="Add a comment..."
                 className="w-full text-xs bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
               />
               <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
-                <button className="p-1 hover:text-zinc-600 dark:hover:text-zinc-200"><Paperclip className="w-4 h-4" /></button>
-                <button className="p-1 text-zinc-800 dark:text-white hover:opacity-80"><Send className="w-4 h-4" /></button>
+                <button type="button" className="p-1 hover:text-zinc-600 dark:hover:text-zinc-200"><Paperclip className="w-4 h-4" /></button>
+                <button type="button" onClick={() => submitComment(mainCommentText, true)} className="p-1 text-zinc-800 dark:text-white hover:opacity-80 transition cursor-pointer"><Send className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
@@ -381,71 +530,103 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                 <span className="text-zinc-400 font-medium">Priority</span>
                 
                 <button
+                  type="button"
                   onClick={() => setShowPriorityMenu(!showPriorityMenu)}
-                  className="flex items-center gap-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-2 py-1 rounded-md transition"
+                  className="flex items-center gap-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-2 py-1 rounded-md transition cursor-pointer"
                 >
                   <PriorityBadge priority={currentPriority} />
-                  <ChevronDown className="w-3 h-3 text-zinc-400" />
+                  {showPriorityMenu ? (
+                    <ChevronUp className="w-3 h-3 text-zinc-400" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-zinc-400" />
+                  )}
                 </button>
 
                 {/* Priority Selection Dropdown Menu matching Figma screenshot */}
                 {showPriorityMenu && (
-                  <div className="absolute right-0 top-7 w-40 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <button
-                      onClick={() => handlePriorityChange('none')}
-                      className="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between text-zinc-500 font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <SignalLow className="w-3 h-3 text-zinc-300" />
-                        <span>No Priority</span>
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowPriorityMenu(false)} />
+                    <div className="absolute right-0 top-7 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/90 dark:border-zinc-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans select-none">
+                      <div className="text-[11px] font-medium text-zinc-400 px-2.5 py-1 mb-1">
+                        Priority
                       </div>
-                      {currentPriority === 'none' && <Check className="w-3 h-3 text-zinc-800" />}
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePriorityChange('urgent')}
-                      className="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between text-rose-500 font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <SignalHigh className="w-3 h-3 text-rose-500" />
-                        <span>Urgent</span>
-                      </div>
-                      {currentPriority === 'urgent' && <Check className="w-3 h-3 text-zinc-800" />}
-                    </button>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriorityChange('none');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <SignalLow className="w-3.5 h-3.5 text-zinc-300" />
+                          <span className="text-zinc-600 dark:text-zinc-400 font-medium">No Priority</span>
+                        </div>
+                        {currentPriority === 'none' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriorityChange('urgent');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="text-rose-500 font-medium">Urgent</span>
+                        </div>
+                        {currentPriority === 'urgent' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                      </button>
 
-                    <button
-                      onClick={() => handlePriorityChange('high')}
-                      className="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between text-rose-500 font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <SignalHigh className="w-3 h-3 text-rose-500" />
-                        <span>High</span>
-                      </div>
-                      {currentPriority === 'high' && <Check className="w-3 h-3 text-zinc-800" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriorityChange('high');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="text-rose-500 font-medium">High</span>
+                        </div>
+                        {currentPriority === 'high' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                      </button>
 
-                    <button
-                      onClick={() => handlePriorityChange('medium')}
-                      className="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between text-amber-500 font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <SignalMedium className="w-3 h-3 text-amber-500" />
-                        <span>Medium</span>
-                      </div>
-                      {currentPriority === 'medium' && <Check className="w-3 h-3 text-zinc-800" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriorityChange('medium');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <SignalMedium className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-amber-500 font-medium">Medium</span>
+                        </div>
+                        {currentPriority === 'medium' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                      </button>
 
-                    <button
-                      onClick={() => handlePriorityChange('low')}
-                      className="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between text-slate-400 font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <SignalLow className="w-3 h-3 text-slate-400" />
-                        <span>Low</span>
-                      </div>
-                      {currentPriority === 'low' && <Check className="w-3 h-3 text-zinc-800" />}
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePriorityChange('low');
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <SignalLow className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-400 font-medium">Low</span>
+                        </div>
+                        {currentPriority === 'low' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -521,7 +702,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
                           <button
                             key={d}
-                            onClick={() => { setSelectedDay(d); setShowDatePicker(false); }}
+                            onClick={() => handleDateChange(d)}
                             className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
                           >
                             {d}
@@ -531,7 +712,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         {/* Selected Date Day (10) - Dark Circle matching image */}
                         <div className="flex items-center justify-center">
                           <button
-                            onClick={() => { setSelectedDay(10); setShowDatePicker(false); }}
+                            onClick={() => handleDateChange(10)}
                             className="w-7 h-7 rounded-full bg-[#171717] dark:bg-white text-white dark:text-zinc-900 font-bold flex items-center justify-center text-xs shadow-xs"
                           >
                             10
@@ -541,7 +722,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         {[11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((d) => (
                           <button
                             key={d}
-                            onClick={() => { setSelectedDay(d); setShowDatePicker(false); }}
+                            onClick={() => handleDateChange(d)}
                             className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
                           >
                             {d}
@@ -551,7 +732,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         {/* Highlighted Today Circle (24) matching image */}
                         <div className="flex items-center justify-center">
                           <button
-                            onClick={() => { setSelectedDay(24); setShowDatePicker(false); }}
+                            onClick={() => handleDateChange(24)}
                             className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-medium flex items-center justify-center text-xs"
                           >
                             24
@@ -561,7 +742,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         {[25, 26, 27, 28, 29, 30, 31].map((d) => (
                           <button
                             key={d}
-                            onClick={() => { setSelectedDay(d); setShowDatePicker(false); }}
+                            onClick={() => handleDateChange(d)}
                             className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
                           >
                             {d}

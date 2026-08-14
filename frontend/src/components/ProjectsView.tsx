@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SignalHigh, SignalMedium, Plus, FolderKanban, MoreHorizontal } from 'lucide-react';
+import { fetchProjectsApi, createProjectApi } from '../lib/api';
+import { useGuest } from '../context/GuestContext';
 
 interface ProjectItem {
   id: string;
@@ -16,6 +18,7 @@ interface ProjectsViewProps {
 }
 
 export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) => {
+  const { guestUserId } = useGuest();
   const [projectsList, setProjectsList] = useState<ProjectItem[]>([
     {
       id: 'proj_1',
@@ -45,17 +48,53 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) =
   const [newProjectPriority, setNewProjectPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [newProjectDueDate, setNewProjectDueDate] = useState('30 Dec 2026');
 
-  const handleAddProject = (e: React.FormEvent) => {
+  const loadProjects = async () => {
+    try {
+      const data = await fetchProjectsApi(guestUserId || 'guest_demo');
+      if (data && data.length > 0) {
+        const formatted: ProjectItem[] = data.map((p) => ({
+          id: p._id,
+          name: p.name,
+          priority: (p.priority
+            ? p.priority.charAt(0).toUpperCase() + p.priority.slice(1)
+            : 'Medium') as 'High' | 'Medium' | 'Low',
+          leadAvatar: '/avatar.png',
+          dueDate: p.dueDate ? new Date(p.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '30 Dec 2026',
+        }));
+        setProjectsList(formatted);
+      }
+    } catch (err) {
+      console.error('Failed to load projects from backend API:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadProjects();
+  }, [guestUserId]);
+
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
-    const newProj: ProjectItem = {
-      id: `proj_${Date.now()}`,
-      name: newProjectName.trim(),
-      priority: newProjectPriority,
-      leadAvatar: '/avatar.png',
-      dueDate: newProjectDueDate || '30 Dec 2026',
-    };
-    setProjectsList([...projectsList, newProj]);
+
+    try {
+      await createProjectApi({
+        name: newProjectName.trim(),
+        priority: newProjectPriority.toLowerCase(),
+        dueDate: newProjectDueDate || '2026-12-30',
+        guestUserId: guestUserId || 'guest_demo',
+      });
+      await loadProjects();
+    } catch (err) {
+      console.error('Failed to create project via API:', err);
+      const newProj: ProjectItem = {
+        id: `proj_${Date.now()}`,
+        name: newProjectName.trim(),
+        priority: newProjectPriority,
+        leadAvatar: '/avatar.png',
+        dueDate: newProjectDueDate || '30 Dec 2026',
+      };
+      setProjectsList([...projectsList, newProj]);
+    }
     setNewProjectName('');
     setShowAddModal(false);
   };
