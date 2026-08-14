@@ -7,7 +7,7 @@ export const GuestLoginModal: React.FC = () => {
   const { loginAsGuest, isLoading } = useGuest();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#F4F4F6] dark:bg-zinc-950 font-sans selection:bg-zinc-200">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-[#F4F4F6] dark:bg-zinc-950 font-sans selection:bg-zinc-200">
       {/* Top Gray Bar Header matching screenshot */}
       <div className="w-full h-7 bg-[#D4D4D8] dark:bg-zinc-800 shrink-0 border-b border-zinc-300/50 dark:border-zinc-700/50" />
 

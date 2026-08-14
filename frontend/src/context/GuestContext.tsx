@@ -2,14 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../types/task';
-import { guestLoginApi, fetchUserProfileApi } from '../lib/api';
+import { guestLoginApi, guestLogoutApi, fetchUserProfileApi } from '../lib/api';
 
 interface GuestContextType {
   guestUserId: string | null;
   user: UserProfile | null;
   isLoading: boolean;
   loginAsGuest: (name?: string) => Promise<void>;
-  logoutGuest: () => void;
+  logoutGuest: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
 }
 
@@ -18,7 +18,7 @@ const GuestContext = createContext<GuestContextType>({
   user: null,
   isLoading: true,
   loginAsGuest: async () => {},
-  logoutGuest: () => {},
+  logoutGuest: async () => {},
   setUser: () => {},
 });
 
@@ -53,10 +53,18 @@ export const GuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const logoutGuest = () => {
-    setGuestUserId(null);
-    setUser(null);
-    localStorage.removeItem('guestUserId');
+  const logoutGuest = async () => {
+    try {
+      if (guestUserId) {
+        await guestLogoutApi(guestUserId);
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setGuestUserId(null);
+      setUser(null);
+      localStorage.removeItem('guestUserId');
+    }
   };
 
   return (
