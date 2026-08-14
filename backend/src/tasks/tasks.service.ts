@@ -65,7 +65,7 @@ export class TasksService {
   }
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
-    const existingTask = await this.taskModel.findById(id).exec();
+    const existingTask = await this.taskModel.findOne({ _id: id }).exec();
     if (!existingTask) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
@@ -97,11 +97,11 @@ export class TasksService {
       updatedData.dueDate = new Date(updateTaskDto.dueDate);
     }
 
-    return this.taskModel.findByIdAndUpdate(id, updatedData, { new: true }).exec();
+    return this.taskModel.findOneAndUpdate({ _id: id }, updatedData, { new: true }).exec();
   }
 
   async remove(id: string): Promise<{ message: string }> {
-    const result = await this.taskModel.findByIdAndDelete(id).exec();
+    const result = await this.taskModel.findOneAndDelete({ _id: id }).exec();
     if (!result) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
@@ -109,7 +109,7 @@ export class TasksService {
   }
 
   async addSubtask(id: string, createSubtaskDto: CreateSubtaskDto): Promise<Task> {
-    const task = await this.taskModel.findById(id).exec();
+    const task = await this.taskModel.findOne({ _id: id }).exec();
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
@@ -133,7 +133,7 @@ export class TasksService {
   }
 
   async addComment(id: string, createCommentDto: CreateCommentDto): Promise<Task> {
-    const task = await this.taskModel.findById(id).exec();
+    const task = await this.taskModel.findOne({ _id: id }).exec();
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
@@ -153,97 +153,109 @@ export class TasksService {
     await this.taskModel.deleteMany({ guestUserId }).exec();
 
     const sampleTasks = [
+      // TO DO TASKS
       {
-        title: 'Write API Documentation',
-        description: 'Create clear and detailed API documentation for public developers in Node/Express/NestJS ecosystem.',
+        title: 'Design Homepage',
+        description: 'Create responsive landing page mockups and Figma design components.',
         status: TaskStatus.TODO,
         priority: TaskPriority.HIGH,
-        labels: ['Research', 'Design', 'Development', 'Testing', 'Deployment'],
+        labels: ['Design', 'Research'],
         dueDate: new Date('2026-09-12'),
         assigneeName: 'Dexter',
         guestUserId,
-        subtasks: [
-          { id: 'sub_1', title: 'Subtask 1', priority: TaskPriority.HIGH, dueDate: new Date('2026-09-12'), assigneeName: 'Dexter' },
-          { id: 'sub_2', title: 'Subtask 2', priority: TaskPriority.LOW, dueDate: new Date('2026-09-15'), assigneeName: 'Dexter' },
-          { id: 'sub_3', title: 'Subtask 3', priority: TaskPriority.MEDIUM, dueDate: new Date('2026-09-18'), assigneeName: 'Dexter' },
-        ],
-        updates: [
-          { id: 'upd_1', text: 'You changed priority from No Priority to High', createdAt: new Date() },
-          { id: 'upd_2', text: 'You added an update - Aug 10th', createdAt: new Date() },
-        ],
-        comments: [
-          { id: 'comm_1', text: 'Draft documentation structure reviewed by lead.', authorName: 'Sarah', createdAt: new Date() },
-        ],
+        projectId: 'proj_1',
       },
       {
-        title: 'Implement Search Function',
-        description: 'Add real-time filter search bar across Kanban board and table list views.',
+        title: 'Develop Login Feature',
+        description: 'Build JWT authentication and guest user login session handler.',
         status: TaskStatus.TODO,
-        priority: TaskPriority.MEDIUM,
-        labels: ['Development', 'Deployment'],
+        priority: TaskPriority.LOW,
+        labels: ['Development'],
         dueDate: new Date('2026-09-15'),
         assigneeName: 'Dexter',
         guestUserId,
+        projectId: 'proj_2',
       },
       {
-        title: 'Deploy to Production',
-        description: 'Setup Vercel frontend & Render backend deployment pipelines.',
+        title: 'Test Payment Gateway',
+        description: 'Integrate Stripe sandbox API and test checkout webhook callbacks.',
         status: TaskStatus.TODO,
+        priority: TaskPriority.MEDIUM,
+        labels: ['Testing', 'Deployment'],
+        dueDate: new Date('2026-09-18'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_3',
+      },
+
+      // DOING TASKS
+      {
+        title: 'Design Homepage',
+        description: 'Refining hero header animations and dark theme color palette.',
+        status: TaskStatus.DOING,
+        priority: TaskPriority.HIGH,
+        labels: ['Design'],
+        dueDate: new Date('2026-09-12'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_1',
+      },
+      {
+        title: 'Develop Login Feature',
+        description: 'Connecting frontend login modal with NestJS auth endpoints.',
+        status: TaskStatus.DOING,
         priority: TaskPriority.LOW,
+        labels: ['Development'],
+        dueDate: new Date('2026-09-15'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_2',
+      },
+      {
+        title: 'Test Payment Gateway',
+        description: 'Executing unit tests for payment success and failure flows.',
+        status: TaskStatus.DOING,
+        priority: TaskPriority.MEDIUM,
+        labels: ['Testing'],
+        dueDate: new Date('2026-09-18'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_3',
+      },
+
+      // COMPLETED TASKS
+      {
+        title: 'Design Homepage',
+        description: 'Initial design wireframes approved by product manager.',
+        status: TaskStatus.COMPLETED,
+        priority: TaskPriority.HIGH,
+        labels: ['Design'],
+        dueDate: new Date('2026-09-12'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_1',
+      },
+      {
+        title: 'Develop Login Feature',
+        description: 'Database user schema created with password hashing.',
+        status: TaskStatus.COMPLETED,
+        priority: TaskPriority.LOW,
+        labels: ['Development'],
+        dueDate: new Date('2026-09-15'),
+        assigneeName: 'Dexter',
+        guestUserId,
+        projectId: 'proj_2',
+      },
+      {
+        title: 'Test Payment Gateway',
+        description: 'API key secret credentials safely configured in environment vars.',
+        status: TaskStatus.COMPLETED,
+        priority: TaskPriority.MEDIUM,
         labels: ['Deployment'],
         dueDate: new Date('2026-09-18'),
         assigneeName: 'Dexter',
         guestUserId,
-      },
-      {
-        title: 'Code Review: Completed',
-        description: 'Audit pull request code quality and DTO validations.',
-        status: TaskStatus.DOING,
-        priority: TaskPriority.HIGH,
-        labels: ['Testing'],
-        dueDate: new Date('2026-09-12'),
-        assigneeName: 'Dexter',
-        guestUserId,
-      },
-      {
-        title: 'Design Mockups Finalised',
-        description: 'Figma screen designs verified against desktop and mobile breakpoints.',
-        status: TaskStatus.DOING,
-        priority: TaskPriority.HIGH,
-        labels: ['Design'],
-        dueDate: new Date('2026-09-15'),
-        assigneeName: 'Dexter',
-        guestUserId,
-      },
-      {
-        title: 'Product Testing Passed',
-        description: 'Verify end-to-end task creation, status drag-and-drop, and theme switching.',
-        status: TaskStatus.COMPLETED,
-        priority: TaskPriority.MEDIUM,
-        labels: ['Testing'],
-        dueDate: new Date('2026-09-10'),
-        assigneeName: 'Dexter',
-        guestUserId,
-      },
-      {
-        title: 'UI Design Updates',
-        description: 'Apply glassmorphism cards and smooth theme transition styles.',
-        status: TaskStatus.COMPLETED,
-        priority: TaskPriority.LOW,
-        labels: ['Design'],
-        dueDate: new Date('2026-09-11'),
-        assigneeName: 'Dexter',
-        guestUserId,
-      },
-      {
-        title: 'Security Audit Settlement',
-        description: 'Enforce strict CORS and input validation pipes.',
-        status: TaskStatus.COMPLETED,
-        priority: TaskPriority.HIGH,
-        labels: ['Development'],
-        dueDate: new Date('2026-09-08'),
-        assigneeName: 'Dexter',
-        guestUserId,
+        projectId: 'proj_3',
       },
     ];
 

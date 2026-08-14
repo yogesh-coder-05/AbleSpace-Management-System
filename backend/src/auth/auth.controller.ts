@@ -9,4 +9,9 @@ export class AuthController {
   async guestLogin(@Body('name') name?: string) {
     return this.authService.guestLogin(name);
   }
+
+  @Post('logout')
+  async logout(@Body('guestUserId') guestUserId?: string) {
+    return this.authService.logout(guestUserId);
+  }
 }

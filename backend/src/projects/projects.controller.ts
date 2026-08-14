@@ -4,7 +4,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 
 @Controller('api/projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(private readonly projectsService: ProjectsService) { }
 
   @Get()
   async findAll(@Query('guestUserId') guestUserId: string) {

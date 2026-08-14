@@ -39,4 +39,8 @@ export class AuthService {
       message: 'Guest session created successfully',
     };
   }
+
+  async logout(guestUserId?: string): Promise<{ message: string }> {
+    return { message: 'Logged out successfully' };
+  }
 }
