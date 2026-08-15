@@ -7,7 +7,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 
 @Controller('api/tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Get()
   async findAll(@Query() query: any) {

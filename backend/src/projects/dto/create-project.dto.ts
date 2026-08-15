@@ -13,7 +13,7 @@ export class CreateProjectDto {
   @IsOptional()
   leadName?: string;
 
-  @IsDateString()
+  @IsString()
   @IsOptional()
   dueDate?: string;
 

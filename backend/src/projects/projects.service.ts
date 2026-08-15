@@ -13,13 +13,25 @@ export class ProjectsService {
     if (guestUserId) {
       filter.guestUserId = guestUserId;
     }
-    return this.projectModel.find(filter).sort({ createdAt: -1 }).exec();
+    const projects = await this.projectModel.find(filter).sort({ createdAt: -1 }).exec();
+    if (projects.length === 0 && guestUserId) {
+      return this.seedDefaultProjects(guestUserId);
+    }
+    return projects;
   }
 
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
+    let parsedDueDate = new Date('2026-09-30');
+    if (createProjectDto.dueDate) {
+      const parsed = new Date(createProjectDto.dueDate);
+      if (!isNaN(parsed.getTime())) {
+        parsedDueDate = parsed;
+      }
+    }
+
     const createdProject = new this.projectModel({
       ...createProjectDto,
-      dueDate: createProjectDto.dueDate ? new Date(createProjectDto.dueDate) : new Date('2026-09-30'),
+      dueDate: parsedDueDate,
     });
     return createdProject.save();
   }

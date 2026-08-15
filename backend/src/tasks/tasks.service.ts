@@ -146,6 +146,12 @@ export class TasksService {
     };
 
     task.comments.push(newComment);
+    task.updates.push({
+      id: `upd_${Date.now()}`,
+      text: `posted an update: "${createCommentDto.text}"`,
+      createdAt: new Date(),
+    });
+
     return task.save();
   }
 
