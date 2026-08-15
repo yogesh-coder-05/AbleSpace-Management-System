@@ -35,8 +35,10 @@ export default function DashboardPage() {
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TaskStatus>('todo');
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const loadTasks = async () => {
     try {
@@ -47,6 +49,11 @@ export default function DashboardPage() {
         projectId: (selectedProjectId && selectedProjectId !== 'projects_view') ? selectedProjectId : undefined,
       });
       setTasks(data);
+      setSelectedTask((prevSelected) => {
+        if (!prevSelected) return null;
+        const freshTask = data.find((t) => t._id === prevSelected._id);
+        return freshTask || prevSelected;
+      });
     } catch (err) {
       console.error(err);
     }
@@ -133,6 +140,7 @@ export default function DashboardPage() {
         onSelectProject={(id, name) => handleSelectProject(id, name)}
         isOpenMobile={isSidebarOpenMobile}
         onCloseMobile={() => setIsSidebarOpenMobile(false)}
+        isCollapsed={isSidebarCollapsed}
       />
 
       {/* Main Body Column */}
@@ -156,8 +164,13 @@ export default function DashboardPage() {
               selectedPriority={selectedPriority}
               setSelectedPriority={setSelectedPriority}
               onAddTaskClick={() => handleOpenCreateModal('todo')}
+              onAddProjectClick={() => setShowAddProjectModal(true)}
+              isProjectsView={selectedProjectId === 'projects_view'}
               selectedProjectName={selectedProjectName}
-              onToggleSidebar={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
+              onToggleSidebar={() => {
+                setIsSidebarCollapsed((prev) => !prev);
+                setIsSidebarOpenMobile((prev) => !prev);
+              }}
               visibleFields={visibleFields}
               setVisibleFields={setVisibleFields}
             />
@@ -167,6 +180,8 @@ export default function DashboardPage() {
               {selectedProjectId === 'projects_view' ? (
                 <ProjectsView
                   onSelectProject={(id, name) => handleSelectProject(id, name)}
+                  showAddModal={showAddProjectModal}
+                  setShowAddModal={setShowAddProjectModal}
                 />
               ) : viewMode === 'board' ? (
                 <KanbanBoard

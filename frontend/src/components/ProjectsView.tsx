@@ -15,9 +15,15 @@ interface ProjectItem {
 
 interface ProjectsViewProps {
   onSelectProject: (id: string, name: string) => void;
+  showAddModal?: boolean;
+  setShowAddModal?: (open: boolean) => void;
 }
 
-export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) => {
+export const ProjectsView: React.FC<ProjectsViewProps> = ({
+  onSelectProject,
+  showAddModal: externalShowAddModal,
+  setShowAddModal: externalSetShowAddModal,
+}) => {
   const { guestUserId } = useGuest();
   const [projectsList, setProjectsList] = useState<ProjectItem[]>([
     {
@@ -43,7 +49,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) =
     },
   ]);
 
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [internalShowAddModal, setInternalShowAddModal] = useState(false);
+  const showAddModal = externalShowAddModal !== undefined ? externalShowAddModal : internalShowAddModal;
+  const setShowAddModal = externalSetShowAddModal || setInternalShowAddModal;
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectPriority, setNewProjectPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [newProjectDueDate, setNewProjectDueDate] = useState('30 Dec 2026');
@@ -51,7 +59,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) =
   const loadProjects = async () => {
     try {
       const data = await fetchProjectsApi(guestUserId || 'guest_demo');
-      if (data && data.length > 0) {
+      if (Array.isArray(data) && data.length > 0) {
         const formatted: ProjectItem[] = data.map((p) => ({
           id: p._id,
           name: p.name,
@@ -77,10 +85,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) =
     if (!newProjectName.trim()) return;
 
     try {
+      let isoDueDate = newProjectDueDate;
+      if (newProjectDueDate) {
+        const parsed = new Date(newProjectDueDate);
+        if (!isNaN(parsed.getTime())) {
+          isoDueDate = parsed.toISOString();
+        }
+      }
+
       await createProjectApi({
         name: newProjectName.trim(),
         priority: newProjectPriority.toLowerCase(),
-        dueDate: newProjectDueDate || '2026-12-30',
+        dueDate: isoDueDate || '2026-12-30',
         guestUserId: guestUserId || 'guest_demo',
       });
       await loadProjects();
@@ -93,7 +109,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onSelectProject }) =
         leadAvatar: '/avatar.png',
         dueDate: newProjectDueDate || '30 Dec 2026',
       };
-      setProjectsList([...projectsList, newProj]);
+      setProjectsList((prev) => [...prev, newProj]);
     }
     setNewProjectName('');
     setShowAddModal(false);

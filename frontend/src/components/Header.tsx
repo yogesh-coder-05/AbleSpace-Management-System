@@ -41,6 +41,8 @@ interface HeaderProps {
   selectedPriority: TaskPriority | 'all';
   setSelectedPriority: (p: TaskPriority | 'all') => void;
   onAddTaskClick: () => void;
+  onAddProjectClick?: () => void;
+  isProjectsView?: boolean;
   selectedProjectName?: string | null;
   onToggleSidebar?: () => void;
   visibleFields: VisibleFields;
@@ -55,6 +57,8 @@ export const Header: React.FC<HeaderProps> = ({
   selectedPriority,
   setSelectedPriority,
   onAddTaskClick,
+  onAddProjectClick,
+  isProjectsView = false,
   selectedProjectName,
   onToggleSidebar,
   visibleFields,
@@ -616,14 +620,24 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Black Pill + Add Task Button matching Figma screenshot */}
-        <button
-          onClick={onAddTaskClick}
-          className="py-1.5 px-3.5 bg-[#09090B] hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Task</span>
-        </button>
+        {/* Black Pill Button (Add Project in Projects View, Add Task in Tasks View) */}
+        {isProjectsView ? (
+          <button
+            onClick={onAddProjectClick}
+            className="py-1.5 px-3.5 bg-[#09090B] hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Project</span>
+          </button>
+        ) : (
+          <button
+            onClick={onAddTaskClick}
+            className="py-1.5 px-3.5 bg-[#09090B] hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Task</span>
+          </button>
+        )}
       </div>
     </div>
   </header>

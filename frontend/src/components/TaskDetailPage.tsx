@@ -69,6 +69,14 @@ const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
   );
 };
 
+interface ActivityItem {
+  id: string;
+  authorName: string;
+  type: 'priority' | 'status' | 'subtask' | 'comment' | 'date' | 'general';
+  text: string;
+  createdAt: string;
+}
+
 export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   task,
   onBack,
@@ -80,22 +88,23 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDay, setSelectedDay] = useState(12);
+  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  const [isUpdatesOpen, setIsUpdatesOpen] = useState(true);
 
   const [isSubtasksOpen, setIsSubtasksOpen] = useState(true);
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [showAddSubtaskModal, setShowAddSubtaskModal] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskPriority, setNewSubtaskPriority] = useState<TaskPriority>('medium');
+  const [newSubtaskAssignee, setNewSubtaskAssignee] = useState('Dexter');
+  const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('2026-09-12');
   const [subtaskList, setSubtaskList] = useState<SubtaskItem[]>([]);
 
   const [replyText, setReplyText] = useState('');
   const [mainCommentText, setMainCommentText] = useState('');
-  const [comments, setComments] = useState<CommentItem[]>(task.comments || [
-    {
-      id: 'c_1',
-      authorName: 'Ankit Dutta',
-      text: 'dsds',
-      createdAt: 'just now',
-    },
-  ]);
+  const [comments, setComments] = useState<CommentItem[]>(task.comments || []);
+  const [activityLogs, setActivityLogs] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
     if (task) {
@@ -110,23 +119,77 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
       if (task.comments && task.comments.length > 0) {
         setComments(task.comments);
       }
-      if (task.subtasks && task.subtasks.length > 0) {
+      if (task.subtasks) {
         setSubtaskList(task.subtasks);
-      } else {
-        setSubtaskList([
-          { id: 'sub_1', title: 'Subtask 1', priority: 'high', dueDate: '12 Sep 2026', assigneeName: 'Dexter' },
-          { id: 'sub_2', title: 'Subtask 2', priority: 'low', dueDate: '15 Sep 2026', assigneeName: 'CN' },
-          { id: 'sub_3', title: 'Subtask 3', priority: 'medium', dueDate: '18 Sep 2026', assigneeName: '' },
-        ]);
       }
+
+      // Populate dynamic updates directly from Backend MongoDB task.updates & task.comments
+      const initialLogs: ActivityItem[] = [];
+
+      if ((task as any).updates && (task as any).updates.length > 0) {
+        const dbUpdates = [...(task as any).updates].reverse();
+        dbUpdates.forEach((upd: any, idx: number) => {
+          const txt = upd.text || '';
+          const isPriority = txt.toLowerCase().includes('priority');
+          const isStatus = txt.toLowerCase().includes('status');
+          const isSubtask = txt.toLowerCase().includes('subtask');
+
+          initialLogs.push({
+            id: upd.id || `upd_db_${idx}`,
+            authorName: 'You',
+            type: isPriority ? 'priority' : isStatus ? 'status' : isSubtask ? 'subtask' : 'general',
+            text: txt,
+            createdAt: upd.createdAt ? new Date(upd.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2026',
+          });
+        });
+      }
+
+      if (task.comments && task.comments.length > 0) {
+        task.comments.forEach((c, idx) => {
+          const exists = initialLogs.some((l) => l.text.includes(c.text));
+          if (!exists) {
+            initialLogs.push({
+              id: `act_c_${idx}`,
+              authorName: c.authorName || 'You',
+              type: 'comment',
+              text: `posted an update: "${c.text}"`,
+              createdAt: c.createdAt || 'Aug 2026',
+            });
+          }
+        });
+      }
+
+      if (initialLogs.length === 0) {
+        initialLogs.push({
+          id: 'act_init',
+          authorName: 'You',
+          type: 'general',
+          text: 'posted an update · Aug 2026',
+          createdAt: 'Aug 2026',
+        });
+      }
+      setActivityLogs(initialLogs);
     }
   }, [task]);
+
+  const taskId = task._id || (task as any).id;
 
   const handlePriorityChange = async (p: TaskPriority) => {
     setCurrentPriority(p);
     setShowPriorityMenu(false);
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'priority',
+        text: `changed priority to ${p.charAt(0).toUpperCase() + p.slice(1)}`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
+    if (!taskId) return;
     try {
-      const res = await updateTaskApi(task._id, { priority: p });
+      const res = await updateTaskApi(taskId, { priority: p });
       if (res && res.priority) {
         setCurrentPriority(res.priority);
       }
@@ -139,8 +202,19 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   const handleStatusChange = async (s: TaskStatus) => {
     setCurrentStatus(s);
     setShowStatusMenu(false);
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'status',
+        text: `changed status to ${s}`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
+    if (!taskId) return;
     try {
-      await updateTaskApi(task._id, { status: s });
+      await updateTaskApi(taskId, { status: s });
       onRefresh();
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -150,9 +224,20 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   const handleDateChange = async (day: number) => {
     setSelectedDay(day);
     setShowDatePicker(false);
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'date',
+        text: `updated due date to Jan ${day}`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
+    if (!taskId) return;
     const updatedDate = new Date(2026, 8, day).toISOString();
     try {
-      const res = await updateTaskApi(task._id, { dueDate: updatedDate });
+      const res = await updateTaskApi(taskId, { dueDate: updatedDate });
       if (res && res.dueDate) {
         const d = new Date(res.dueDate);
         if (!isNaN(d.getTime())) {
@@ -165,40 +250,91 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
     }
   };
 
+  const handleCreateSubtaskModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubtaskTitle.trim()) return;
+    const titleToAdd = newSubtaskTitle.trim();
+    const priorityToAdd = newSubtaskPriority;
+    const assigneeToAdd = newSubtaskAssignee.trim() || 'Dexter';
+    const dateToAdd = newSubtaskDueDate || '2026-09-12';
+
+    setNewSubtaskTitle('');
+    setShowAddSubtaskModal(false);
+
+    const newSubItem: SubtaskItem = {
+      id: `sub_${Date.now()}`,
+      title: titleToAdd,
+      priority: priorityToAdd,
+      dueDate: dateToAdd,
+      assigneeName: assigneeToAdd,
+    };
+
+    setSubtaskList((prev) => [...prev, newSubItem]);
+
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'subtask',
+        text: `added subtask "${titleToAdd}" assigned to ${assigneeToAdd}`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
+
+    if (!taskId) return;
+    try {
+      const updatedTask = await addSubtaskApi(taskId, {
+        title: titleToAdd,
+        priority: priorityToAdd,
+        dueDate: dateToAdd,
+        assigneeName: assigneeToAdd,
+      });
+      if (updatedTask && updatedTask.subtasks && updatedTask.subtasks.length > 0) {
+        setSubtaskList(updatedTask.subtasks);
+      }
+      onRefresh();
+    } catch (err) {
+      console.error('Subtask API call error:', err);
+    }
+  };
+
   const handleAddSubtaskSubmit = async () => {
     if (!newSubtaskTitle.trim()) return;
     const titleToAdd = newSubtaskTitle.trim();
     setNewSubtaskTitle('');
     setIsAddingSubtask(false);
 
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'subtask',
+        text: `added subtask "${titleToAdd}"`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
+
+    const newSubItem: SubtaskItem = {
+      id: `sub_${Date.now()}`,
+      title: titleToAdd,
+      priority: 'medium',
+      dueDate: '12 Sep 2026',
+      assigneeName: 'Dexter',
+    };
+
+    setSubtaskList((prev) => [...prev, newSubItem]);
+
+    if (!taskId) return;
     try {
-      const updatedTask = await addSubtaskApi(task._id, { title: titleToAdd });
-      if (updatedTask && updatedTask.subtasks) {
+      const updatedTask = await addSubtaskApi(taskId, { title: titleToAdd });
+      if (updatedTask && updatedTask.subtasks && updatedTask.subtasks.length > 0) {
         setSubtaskList(updatedTask.subtasks);
-      } else {
-        setSubtaskList((prev) => [
-          ...prev,
-          {
-            id: `sub_${Date.now()}`,
-            title: titleToAdd,
-            priority: 'medium',
-            dueDate: '18 Sep 2026',
-            assigneeName: 'Dexter',
-          },
-        ]);
       }
       onRefresh();
     } catch (err) {
-      setSubtaskList((prev) => [
-        ...prev,
-        {
-          id: `sub_${Date.now()}`,
-          title: titleToAdd,
-          priority: 'medium',
-          dueDate: '18 Sep 2026',
-          assigneeName: 'Dexter',
-        },
-      ]);
+      console.error('Subtask API call error:', err);
     }
   };
 
@@ -207,6 +343,17 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
     const content = text.trim();
     if (isMain) setMainCommentText('');
     else setReplyText('');
+
+    setActivityLogs((prev) => [
+      {
+        id: `act_${Date.now()}`,
+        authorName: 'You',
+        type: 'comment',
+        text: `posted an update: "${content}"`,
+        createdAt: 'Just now',
+      },
+      ...prev,
+    ]);
 
     const newCommentObj = {
       id: `c_${Date.now()}`,
@@ -217,9 +364,10 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
 
     setComments((prev) => [...prev, newCommentObj]);
 
+    if (!taskId) return;
     try {
-      const updatedTask = await addCommentApi(task._id, { text: content, authorName: 'You' });
-      if (updatedTask && updatedTask.comments) {
+      const updatedTask = await addCommentApi(taskId, { text: content, authorName: 'You' });
+      if (updatedTask && updatedTask.comments && updatedTask.comments.length > 0) {
         setComments(updatedTask.comments);
       }
       onRefresh();
@@ -255,7 +403,14 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
           <button className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 transition" title="More Options">
             <MoreHorizontal className="w-3.5 h-3.5" />
           </button>
-          <button className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 transition" title="Side Panel">
+          <button
+            onClick={() => setShowRightPanel(!showRightPanel)}
+            className={`p-1.5 rounded-lg border text-xs font-medium transition cursor-pointer ${showRightPanel
+                ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+              }`}
+            title="Side Panel (Details & Updates)"
+          >
             <PanelRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -263,10 +418,10 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
 
       {/* Main Task Detail Content: 2 Columns (70% Left, 30% Right) matching Figma screenshot */}
       <div className="max-w-7xl mx-auto p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left Column (Main Content & Subtasks Table) */}
-        <div className="lg:col-span-8 space-y-8">
-          
+        <div className={`${showRightPanel ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-8 transition-all duration-300`}>
+
           {/* Title & Description */}
           <div className="space-y-3">
             <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
@@ -280,7 +435,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
 
           {/* Properties & Meta Rows matching exact Figma specs */}
           <div className="space-y-4 text-xs border-t border-b border-zinc-100 dark:border-zinc-800/80 py-4 font-sans">
-            
+
             {/* Properties */}
             <div className="flex items-center gap-4">
               <span className="w-24 text-sm font-medium font-sans text-[#171717] dark:text-zinc-200 shrink-0">Properties</span>
@@ -422,7 +577,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                           ) : (
                             <button
                               type="button"
-                              onClick={() => setIsAddingSubtask(true)}
+                              onClick={() => setShowAddSubtaskModal(true)}
                               className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -498,321 +653,451 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
         </div>
 
         {/* Right Sidebar Panel (Details & Updates Cards matching Figma screenshot) */}
-        <div className="lg:col-span-4 space-y-5">
-          
-          {/* Details Card */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-5 space-y-4 shadow-2xs font-sans">
-            <div className="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-white">
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />
-                <span>Details</span>
-              </div>
-              <div className="flex items-center gap-1 text-zinc-900 dark:text-white">
-                <button className="p-1 hover:opacity-80 text-zinc-900 dark:text-white"><Plus className="w-3.5 h-3.5" /></button>
-                <button className="p-1 hover:opacity-80 text-zinc-900 dark:text-white"><Settings className="w-3.5 h-3.5" /></button>
-              </div>
-            </div>
+        {showRightPanel && (
+          <div className="lg:col-span-4 space-y-5 animate-in fade-in zoom-in-95 duration-200">
 
-            {/* Field Grid Rows */}
-            <div className="space-y-3 text-xs">
-              
-              {/* Status */}
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-medium">Status</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span className="capitalize">{currentStatus}</span>
-                </span>
-              </div>
-
-              {/* Priority with Interactive Popover Dropdown matching Figma */}
-              <div className="flex items-center justify-between relative">
-                <span className="text-zinc-400 font-medium">Priority</span>
-                
+            {/* Details Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-5 space-y-4 shadow-2xs font-sans">
+              <div className="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800 select-none">
                 <button
                   type="button"
-                  onClick={() => setShowPriorityMenu(!showPriorityMenu)}
-                  className="flex items-center gap-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-2 py-1 rounded-md transition cursor-pointer"
+                  onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                  className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-white hover:opacity-80 transition cursor-pointer"
                 >
-                  <PriorityBadge priority={currentPriority} />
-                  {showPriorityMenu ? (
-                    <ChevronUp className="w-3 h-3 text-zinc-400" />
+                  {isDetailsOpen ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />
                   ) : (
-                    <ChevronDown className="w-3 h-3 text-zinc-400" />
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />
                   )}
+                  <span>Details</span>
                 </button>
-
-                {/* Priority Selection Dropdown Menu matching Figma screenshot */}
-                {showPriorityMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowPriorityMenu(false)} />
-                    <div className="absolute right-0 top-7 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/90 dark:border-zinc-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans select-none">
-                      <div className="text-[11px] font-medium text-zinc-400 px-2.5 py-1 mb-1">
-                        Priority
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePriorityChange('none');
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SignalLow className="w-3.5 h-3.5 text-zinc-300" />
-                          <span className="text-zinc-600 dark:text-zinc-400 font-medium">No Priority</span>
-                        </div>
-                        {currentPriority === 'none' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
-                      </button>
-                      
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePriorityChange('urgent');
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
-                          <span className="text-rose-500 font-medium">Urgent</span>
-                        </div>
-                        {currentPriority === 'urgent' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePriorityChange('high');
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
-                          <span className="text-rose-500 font-medium">High</span>
-                        </div>
-                        {currentPriority === 'high' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePriorityChange('medium');
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SignalMedium className="w-3.5 h-3.5 text-amber-500" />
-                          <span className="text-amber-500 font-medium">Medium</span>
-                        </div>
-                        {currentPriority === 'medium' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePriorityChange('low');
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SignalLow className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-slate-400 font-medium">Low</span>
-                        </div>
-                        {currentPriority === 'low' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div className="flex items-center gap-1 text-zinc-900 dark:text-white">
+                  <button className="p-1 hover:opacity-80 text-zinc-900 dark:text-white"><Plus className="w-3.5 h-3.5" /></button>
+                  <button className="p-1 hover:opacity-80 text-zinc-900 dark:text-white"><Settings className="w-3.5 h-3.5" /></button>
+                </div>
               </div>
 
-              {/* Members */}
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-medium">Members</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                    <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
+              {/* Field Grid Rows */}
+              {isDetailsOpen && (
+                <div className="space-y-3 text-xs">
+
+                  {/* Status */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-medium">Status</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span className="capitalize">{currentStatus}</span>
+                    </span>
                   </div>
-                  <span className="text-zinc-800 dark:text-zinc-200 font-medium">{task.assigneeName || 'Dexter'}</span>
-                </div>
-              </div>
 
-              {/* Dates Row with Interactive Calendar Popover matching Figma screenshot */}
-              <div className="flex items-center justify-between relative">
-                <span className="text-zinc-400 font-medium">Dates</span>
-                
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition"
-                  >
-                    <Calendar className="w-3 h-3 text-zinc-500" />
-                    <span>Jan {selectedDay}</span>
-                  </button>
+                  {/* Priority with Interactive Popover Dropdown matching Figma */}
+                  <div className="flex items-center justify-between relative">
+                    <span className="text-zinc-400 font-medium">Priority</span>
 
-                  <ArrowRight className="w-3 h-3 text-zinc-400 shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPriorityMenu(!showPriorityMenu)}
+                      className="flex items-center gap-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-2 py-1 rounded-md transition cursor-pointer"
+                    >
+                      <PriorityBadge priority={currentPriority} />
+                      {showPriorityMenu ? (
+                        <ChevronUp className="w-3 h-3 text-zinc-400" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3 text-zinc-400" />
+                      )}
+                    </button>
 
-                  <button
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition"
-                  >
-                    <Calendar className="w-3 h-3 text-zinc-400" />
-                    <span>End</span>
-                  </button>
-                </div>
+                    {/* Priority Selection Dropdown Menu matching Figma screenshot */}
+                    {showPriorityMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowPriorityMenu(false)} />
+                        <div className="absolute right-0 top-7 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/90 dark:border-zinc-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans select-none">
+                          <div className="text-[11px] font-medium text-zinc-400 px-2.5 py-1 mb-1">
+                            Priority
+                          </div>
 
-                {/* Calendar Picker Popup Card matching exact Figma screenshot */}
-                {showDatePicker && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
-                    <div className="absolute right-0 top-7 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.15)] border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans select-none">
-                      
-                      {/* Header Month Selector */}
-                      <div className="flex items-center justify-between mb-3 px-1 text-xs font-semibold text-zinc-900 dark:text-white">
-                        <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400">
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span>January 2026</span>
-                        <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400">
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Day of Week Labels */}
-                      <div className="grid grid-cols-7 text-center text-[11px] font-medium text-zinc-400 mb-2">
-                        <span>Su</span>
-                        <span>Mo</span>
-                        <span>Tu</span>
-                        <span>We</span>
-                        <span>Th</span>
-                        <span>Fr</span>
-                        <span>Sa</span>
-                      </div>
-
-                      {/* Days Grid matching Figma screenshot */}
-                      <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
-                        {/* Prev Month Day */}
-                        <span className="py-1 text-zinc-300 dark:text-zinc-600">30</span>
-                        
-                        {/* Current Month Days 1-9 */}
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
                           <button
-                            key={d}
-                            onClick={() => handleDateChange(d)}
-                            className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePriorityChange('none');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
                           >
-                            {d}
+                            <div className="flex items-center gap-2">
+                              <SignalLow className="w-3.5 h-3.5 text-zinc-300" />
+                              <span className="text-zinc-600 dark:text-zinc-400 font-medium">No Priority</span>
+                            </div>
+                            {currentPriority === 'none' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
                           </button>
-                        ))}
 
-                        {/* Selected Date Day (10) - Dark Circle matching image */}
-                        <div className="flex items-center justify-center">
                           <button
-                            onClick={() => handleDateChange(10)}
-                            className="w-7 h-7 rounded-full bg-[#171717] dark:bg-white text-white dark:text-zinc-900 font-bold flex items-center justify-center text-xs shadow-xs"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePriorityChange('urgent');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
                           >
-                            10
+                            <div className="flex items-center gap-2">
+                              <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
+                              <span className="text-rose-500 font-medium">Urgent</span>
+                            </div>
+                            {currentPriority === 'urgent' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePriorityChange('high');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <SignalHigh className="w-3.5 h-3.5 text-rose-500" />
+                              <span className="text-rose-500 font-medium">High</span>
+                            </div>
+                            {currentPriority === 'high' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePriorityChange('medium');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <SignalMedium className="w-3.5 h-3.5 text-amber-500" />
+                              <span className="text-amber-500 font-medium">Medium</span>
+                            </div>
+                            {currentPriority === 'medium' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePriorityChange('low');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-xl flex items-center justify-between transition cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <SignalLow className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-slate-400 font-medium">Low</span>
+                            </div>
+                            {currentPriority === 'low' && <Check className="w-3.5 h-3.5 text-zinc-800 dark:text-white" />}
                           </button>
                         </div>
+                      </>
+                    )}
+                  </div>
 
-                        {[11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((d) => (
-                          <button
-                            key={d}
-                            onClick={() => handleDateChange(d)}
-                            className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
-                          >
-                            {d}
-                          </button>
-                        ))}
-
-                        {/* Highlighted Today Circle (24) matching image */}
-                        <div className="flex items-center justify-center">
-                          <button
-                            onClick={() => handleDateChange(24)}
-                            className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-medium flex items-center justify-center text-xs"
-                          >
-                            24
-                          </button>
-                        </div>
-
-                        {[25, 26, 27, 28, 29, 30, 31].map((d) => (
-                          <button
-                            key={d}
-                            onClick={() => handleDateChange(d)}
-                            className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
-                          >
-                            {d}
-                          </button>
-                        ))}
-
-                        {/* Next Month Days */}
-                        <span className="py-1 text-zinc-300 dark:text-zinc-600">1</span>
-                        <span className="py-1 text-zinc-300 dark:text-zinc-600">2</span>
-                        <span className="py-1 text-zinc-300 dark:text-zinc-600">3</span>
+                  {/* Members */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-medium">Members</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                        <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
                       </div>
+                      <span className="text-zinc-800 dark:text-zinc-200 font-medium">{task.assigneeName || 'Dexter'}</span>
                     </div>
-                  </>
+                  </div>
+
+                  {/* Dates Row with Interactive Calendar Popover matching Figma screenshot */}
+                  <div className="flex items-center justify-between relative">
+                    <span className="text-zinc-400 font-medium">Dates</span>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition"
+                      >
+                        <Calendar className="w-3 h-3 text-zinc-500" />
+                        <span>Jan {selectedDay}</span>
+                      </button>
+
+                      <ArrowRight className="w-3 h-3 text-zinc-400 shrink-0" />
+
+                      <button
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition"
+                      >
+                        <Calendar className="w-3 h-3 text-zinc-400" />
+                        <span>End</span>
+                      </button>
+                    </div>
+
+                    {/* Calendar Picker Popup Card matching exact Figma screenshot */}
+                    {showDatePicker && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
+                        <div className="absolute right-0 top-7 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.15)] border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans select-none">
+
+                          {/* Header Month Selector */}
+                          <div className="flex items-center justify-between mb-3 px-1 text-xs font-semibold text-zinc-900 dark:text-white">
+                            <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400">
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <span>January 2026</span>
+                            <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400">
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Day of Week Labels */}
+                          <div className="grid grid-cols-7 text-center text-[11px] font-medium text-zinc-400 mb-2">
+                            <span>Su</span>
+                            <span>Mo</span>
+                            <span>Tu</span>
+                            <span>We</span>
+                            <span>Th</span>
+                            <span>Fr</span>
+                            <span>Sa</span>
+                          </div>
+
+                          {/* Days Grid matching Figma screenshot */}
+                          <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
+                            {/* Prev Month Day */}
+                            <span className="py-1 text-zinc-300 dark:text-zinc-600">30</span>
+
+                            {/* Current Month Days 1-31 Dynamic Highlight */}
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                              const isSelected = d === selectedDay;
+                              const isToday = d === 24;
+
+                              if (isSelected) {
+                                return (
+                                  <div key={d} className="flex items-center justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDateChange(d)}
+                                      className="w-7 h-7 rounded-full bg-[#171717] dark:bg-white text-white dark:text-zinc-900 font-bold flex items-center justify-center text-xs shadow-xs cursor-pointer"
+                                    >
+                                      {d}
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              if (isToday) {
+                                return (
+                                  <div key={d} className="flex items-center justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDateChange(d)}
+                                      className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-medium flex items-center justify-center text-xs cursor-pointer"
+                                    >
+                                      {d}
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <button
+                                  key={d}
+                                  type="button"
+                                  onClick={() => handleDateChange(d)}
+                                  className="py-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full cursor-pointer"
+                                >
+                                  {d}
+                                </button>
+                              );
+                            })}
+
+                            {/* Next Month Days */}
+                            <span className="py-1 text-zinc-300 dark:text-zinc-600">1</span>
+                            <span className="py-1 text-zinc-300 dark:text-zinc-600">2</span>
+                            <span className="py-1 text-zinc-300 dark:text-zinc-600">3</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Labels */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-medium">Labels</span>
+                    <span className="text-zinc-800 dark:text-zinc-200 font-medium">Design</span>
+                  </div>
+
+                  {/* Teams */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-medium">Teams</span>
+                    <span className="text-zinc-800 dark:text-zinc-200 font-medium">Engineering</span>
+                  </div>
+
+                  {/* Reporter */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-medium">Reporter</span>
+                    <span className="text-zinc-800 dark:text-zinc-200 font-medium">Dexter</span>
+                  </div>
+
+                </div>
+              )}
+            </div>
+
+            {/* Updates Card matching Figma screenshot */}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-5 space-y-3.5 shadow-2xs font-sans">
+              <button
+                type="button"
+                onClick={() => setIsUpdatesOpen(!isUpdatesOpen)}
+                className="w-full flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-white pb-1 border-b border-zinc-100 dark:border-zinc-800 hover:opacity-80 transition cursor-pointer select-none"
+              >
+                {isUpdatesOpen ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
                 )}
-              </div>
+                <span>Updates</span>
+              </button>
 
-              {/* Labels */}
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-medium">Labels</span>
-                <span className="text-zinc-800 dark:text-zinc-200 font-medium">Design</span>
-              </div>
-
-              {/* Teams */}
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-medium">Teams</span>
-                <span className="text-zinc-800 dark:text-zinc-200 font-medium">Engineering</span>
-              </div>
-
-              {/* Reporter */}
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-medium">Reporter</span>
-                <span className="text-zinc-800 dark:text-zinc-200 font-medium">Dexter</span>
-              </div>
-
+              {isUpdatesOpen && (
+                <div className="space-y-3 text-xs">
+                  {activityLogs.length === 0 ? (
+                    <div className="text-zinc-400 text-xs italic">No updates for this task yet.</div>
+                  ) : (
+                    activityLogs.map((log) => (
+                      <div key={log.id} className="flex items-start gap-2 text-zinc-600 dark:text-zinc-400 animate-in fade-in duration-200">
+                        {log.type === 'priority' ? (
+                          <div className="w-5 h-5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <SignalHigh className="w-3 h-3" />
+                          </div>
+                        ) : log.type === 'status' ? (
+                          <div className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        ) : log.type === 'subtask' ? (
+                          <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <Plus className="w-3 h-3" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5 border border-zinc-200 dark:border-zinc-700">
+                            <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.authorName}</span>
+                          <span className="text-zinc-500 dark:text-zinc-400"> {log.text}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
+
           </div>
-
-          {/* Updates Card matching Figma screenshot */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 p-5 space-y-3.5 shadow-2xs font-sans">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-white pb-1 border-b border-zinc-100 dark:border-zinc-800">
-              <ChevronDown className="w-3.5 h-3.5 text-zinc-600" />
-              <span>Updates</span>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2 text-zinc-600 dark:text-zinc-400">
-                <div className="w-5 h-5 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
-                  <SignalHigh className="w-3 h-3" />
-                </div>
-                <div>
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">You</span>
-                  <span className="text-zinc-500"> changed priority from No priority to Urgent</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 text-zinc-600 dark:text-zinc-400">
-                <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5">
-                  <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">You</span>
-                  <span className="text-zinc-500"> posted an update · Aug 2026</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        )}
 
       </div>
+
+      {/* Add Subtask Popup Modal */}
+      {showAddSubtaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-2xl w-full max-w-md p-6 space-y-5 select-none font-sans">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                <Plus className="w-4 h-4 text-zinc-500" />
+                <span>Add New Subtask</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddSubtaskModal(false)}
+                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 text-lg font-bold p-1 rounded-lg transition cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubtaskModalSubmit} className="space-y-4 text-xs font-sans">
+              {/* Title */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Subtask Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  placeholder="e.g. Design Navbar & Footer components"
+                  autoFocus
+                  className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition"
+                />
+              </div>
+
+              {/* Priority & Assignee Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Priority */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Priority
+                  </label>
+                  <select
+                    value={newSubtaskPriority}
+                    onChange={(e) => setNewSubtaskPriority(e.target.value as TaskPriority)}
+                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition"
+                  >
+                    <option value="urgent">Urgent</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="none">No Priority</option>
+                  </select>
+                </div>
+
+                {/* Member / Assignee */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Assign Member
+                  </label>
+                  <input
+                    type="text"
+                    value={newSubtaskAssignee}
+                    onChange={(e) => setNewSubtaskAssignee(e.target.value)}
+                    placeholder="e.g. Dexter, Ankit, CN"
+                    className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Due Date */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={newSubtaskDueDate}
+                  onChange={(e) => setNewSubtaskDueDate(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition"
+                />
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSubtaskModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold rounded-xl hover:opacity-90 transition shadow-xs cursor-pointer"
+                >
+                  Add Subtask
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

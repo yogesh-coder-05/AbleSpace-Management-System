@@ -27,6 +27,7 @@ interface SidebarProps {
   selectedProjectId?: string | null;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  isCollapsed?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedProjectId,
   isOpenMobile = false,
   onCloseMobile,
+  isCollapsed = false,
 }) => {
   const pathname = usePathname();
   const { user, logoutGuest } = useGuest();
@@ -56,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Mobile Backdrop Overlay */}
-      {isOpenMobile && (
+      {(isOpenMobile && !isCollapsed) && (
         <div
           onClick={onCloseMobile}
           className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-xs transition-opacity"
@@ -64,8 +66,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 md:w-60 h-screen border-r border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col justify-between p-4 shrink-0 font-sans selection:bg-zinc-200 transition-transform duration-300 ease-in-out ${
-          isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`fixed md:static inset-y-0 left-0 z-50 h-screen border-r border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col justify-between shrink-0 font-sans selection:bg-zinc-200 transition-all duration-300 ease-in-out ${
+          isCollapsed
+            ? 'w-0 opacity-0 -translate-x-full p-0 overflow-hidden border-none pointer-events-none'
+            : 'w-64 md:w-60 opacity-100 translate-x-0 p-4'
         }`}
       >
         <div className="space-y-6">

@@ -93,7 +93,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
-        
+
         {/* Modal Top Action Bar */}
         <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <div className="flex items-center gap-2">
@@ -121,10 +121,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
-          
+
           {/* Left Column (Title, Description, Subtasks, Comments) */}
           <div className="lg:col-span-2 p-8 space-y-6">
-            
+
             {/* Title & Description */}
             <div className="space-y-3">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
@@ -261,7 +261,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
 
           {/* Right Sidebar Column (Details, Priority Selector, Activity Log Timeline) */}
           <div className="p-8 space-y-6 bg-slate-50/40 dark:bg-slate-900/40">
-            
+
             {/* Details Panel */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Details</h3>
