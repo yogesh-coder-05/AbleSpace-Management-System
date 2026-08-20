@@ -59,29 +59,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onCardClick }) => {
       onClick={() => onCardClick(task)}
       className="group bg-[#FFFFFF] dark:bg-zinc-900 rounded-[8px] p-3 border border-[#E5E5E5] dark:border-zinc-800 shadow-none hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-grab active:cursor-grabbing hover:shadow-sm space-y-3 font-sans w-full max-w-[273px] selection:bg-zinc-200 active:scale-[0.98] duration-150"
     >
-      {/* Title Row with 3-Dots (Figma: width 247px, height 20px, justify-content space-between, text-sm, #171717) */}
+      {/* Title Row with 3-Dots (Figma: width 168px x 20px, font-sans medium text-sm leading-5, color #0A0A0A) */}
       <div className="flex items-center justify-between gap-2 h-5 w-full">
-        <h3 className="text-[14px] font-medium text-[#171717] dark:text-white leading-[20px] truncate">
+        <h3 className="text-sm font-medium text-[#0A0A0A] dark:text-white leading-[20px] truncate font-sans">
           {task.title}
         </h3>
-        <button className="text-[#71717A] hover:text-[#171717] dark:hover:text-white transition shrink-0 p-0.5">
+        <button className="text-[#71717A] hover:text-[#0A0A0A] dark:hover:text-white transition shrink-0 p-0.5">
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Assignee & Date Badge Row (Figma: Admin gap 4px | Date #DC26261A bg, rounded-full, 20px height) */}
+      {/* Assignee & Date Badge Row */}
       <div className="flex items-center justify-between gap-2 h-5">
         {/* Assignee Avatar + Name */}
         <div className="flex items-center gap-1.5 h-5">
           <CustomAvatar name={task.assigneeName} />
-          <span className="text-[13px] font-medium text-[#171717] dark:text-zinc-200">
+          <span className="text-[13px] font-medium text-[#0A0A0A] dark:text-zinc-200 font-sans">
             {task.assigneeName || 'Admin'}
           </span>
         </div>
 
-        {/* Date Pill Badge: Destructive variant (#DC26261A background, red text, rounded-full) */}
-        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#DC26261A] text-[#DC2626] dark:text-red-400 text-[11px] font-medium border border-[#DC262615] shrink-0 h-5">
-          <Calendar className="w-3 h-3 text-[#DC2626] dark:text-red-400 shrink-0" />
+        {/* Date Pill Badge: Destructive Variant (Figma: width 67px, height 20px, gap 4px, py-0.5 px-2, rounded-full, bg #DC26261A, 12px calendar icon) */}
+        <div className="flex items-center justify-center gap-1 px-2 py-0.5 rounded-full bg-[#DC26261A] text-[#DC2626] dark:text-rose-400 text-[11px] font-medium border border-white/20 dark:border-rose-900/30 shrink-0 h-5 min-w-[67px]">
+          <Calendar className="w-3 h-3 text-[#DC2626] dark:text-rose-400 shrink-0" />
           <span>{formattedDate}</span>
         </div>
       </div>
