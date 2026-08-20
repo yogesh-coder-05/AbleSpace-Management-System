@@ -133,13 +133,14 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
           const isPriority = txt.toLowerCase().includes('priority');
           const isStatus = txt.toLowerCase().includes('status');
           const isSubtask = txt.toLowerCase().includes('subtask');
+          const isDate = txt.toLowerCase().includes('date') || txt.toLowerCase().includes('due');
 
           initialLogs.push({
             id: upd.id || `upd_db_${idx}`,
             authorName: 'You',
-            type: isPriority ? 'priority' : isStatus ? 'status' : isSubtask ? 'subtask' : 'general',
+            type: isPriority ? 'priority' : isStatus ? 'status' : isSubtask ? 'subtask' : isDate ? 'date' : 'general',
             text: txt,
-            createdAt: upd.createdAt ? new Date(upd.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2026',
+            createdAt: upd.createdAt ? new Date(upd.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 2026',
           });
         });
       }
@@ -235,7 +236,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
       ...prev,
     ]);
     if (!taskId) return;
-    const updatedDate = new Date(2026, 8, day).toISOString();
+    const updatedDate = new Date(2026, 0, day).toISOString();
     try {
       const res = await updateTaskApi(taskId, { dueDate: updatedDate });
       if (res && res.dueDate) {
@@ -379,7 +380,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-zinc-200">
       {/* Top Header Action Bar matching Figma screenshot */}
-      <div className="border-b border-zinc-200/80 dark:border-zinc-800 px-6 py-3 flex items-center justify-between sticky top-0 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md z-30">
+      <div className="border-b border-zinc-200/80 dark:border-zinc-800 px-3 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md z-30">
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
@@ -417,7 +418,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
       </div>
 
       {/* Main Task Detail Content: 2 Columns (70% Left, 30% Right) matching Figma screenshot */}
-      <div className="max-w-7xl mx-auto p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="max-w-7xl mx-auto p-3 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
         {/* Left Column (Main Content & Subtasks Table) */}
         <div className={`${showRightPanel ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-8 transition-all duration-300`}>
@@ -441,17 +442,22 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
               <span className="w-24 text-sm font-medium font-sans text-[#171717] dark:text-zinc-200 shrink-0">Properties</span>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-[24px] h-[24px] rounded-full bg-[#F4F4F5] dark:bg-zinc-800 text-[#171717] dark:text-zinc-200 font-sans font-normal text-xs flex items-center justify-center shrink-0">
-                    A
+                  <div className="w-[24px] h-[24px] rounded-full bg-[#F4F4F5] dark:bg-zinc-800 text-[#171717] dark:text-zinc-200 font-sans font-medium text-xs flex items-center justify-center shrink-0">
+                    {(task.assigneeName || 'Dexter').charAt(0).toUpperCase()}
                   </div>
                   <span className="text-[13px] font-medium font-sans text-[#171717] dark:text-zinc-100 leading-none">
-                    Designer
+                    {task.assigneeName || 'Dexter'}
                   </span>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-[#FEE2E2]/60 dark:bg-rose-950/40 text-[#DC2626] dark:text-rose-400 font-medium text-xs flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="px-3 py-1 rounded-full bg-[#FEE2E2]/60 dark:bg-rose-950/40 text-[#DC2626] dark:text-rose-400 font-medium text-xs flex items-center gap-1.5 hover:opacity-80 transition cursor-pointer"
+                  title="Click to change due date"
+                >
                   <Calendar className="w-3.5 h-3.5 text-[#DC2626]" />
-                  <span>31 Jul</span>
-                </span>
+                  <span>Jan {selectedDay}</span>
+                </button>
               </div>
             </div>
 
@@ -459,7 +465,10 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
             <div className="flex items-center gap-4">
               <span className="w-24 text-sm font-medium font-sans text-[#171717] dark:text-zinc-200 shrink-0">Labels</span>
               <div className="flex flex-wrap items-center gap-1.5">
-                {['Research', 'Design', 'Development', 'Testing', 'Deployment'].map((lbl) => (
+                {(task.labels && task.labels.length > 0
+                  ? task.labels
+                  : ['Research', 'Design', 'Development', 'Testing', 'Deployment']
+                ).map((lbl) => (
                   <span
                     key={lbl}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F4F4F5] dark:bg-zinc-800 text-[#171717] dark:text-zinc-200 font-medium text-[11px] border border-zinc-200/60 dark:border-zinc-700/60"
@@ -973,6 +982,10 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
                         ) : log.type === 'subtask' ? (
                           <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center shrink-0 mt-0.5">
                             <Plus className="w-3 h-3" />
+                          </div>
+                        ) : log.type === 'date' ? (
+                          <div className="w-5 h-5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <Calendar className="w-3 h-3" />
                           </div>
                         ) : (
                           <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5 border border-zinc-200 dark:border-zinc-700">

@@ -75,7 +75,7 @@ export class TasksService {
     if (updateTaskDto.priority && updateTaskDto.priority !== existingTask.priority) {
       updatesAudit.push({
         id: `upd_${Date.now()}`,
-        text: `You changed priority to ${updateTaskDto.priority.toUpperCase()}`,
+        text: `changed priority to ${updateTaskDto.priority.toLowerCase()}`,
         createdAt: new Date(),
       });
     }
@@ -83,9 +83,38 @@ export class TasksService {
     if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
       updatesAudit.push({
         id: `upd_${Date.now()}`,
-        text: `You moved task status to ${updateTaskDto.status.replace('_', ' ').toUpperCase()}`,
+        text: `changed status to ${updateTaskDto.status}`,
         createdAt: new Date(),
       });
+    }
+
+    if (updateTaskDto.assigneeName && updateTaskDto.assigneeName !== existingTask.assigneeName) {
+      updatesAudit.push({
+        id: `upd_${Date.now()}`,
+        text: `assigned task to ${updateTaskDto.assigneeName}`,
+        createdAt: new Date(),
+      });
+    }
+
+    if (updateTaskDto.title && updateTaskDto.title !== existingTask.title) {
+      updatesAudit.push({
+        id: `upd_${Date.now()}`,
+        text: `updated title to "${updateTaskDto.title}"`,
+        createdAt: new Date(),
+      });
+    }
+
+    if (updateTaskDto.dueDate) {
+      const newDueDate = new Date(updateTaskDto.dueDate);
+      const oldTime = existingTask.dueDate ? new Date(existingTask.dueDate).getTime() : 0;
+      if (!existingTask.dueDate || oldTime !== newDueDate.getTime()) {
+        const formattedDate = newDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        updatesAudit.push({
+          id: `upd_${Date.now()}`,
+          text: `updated due date to ${formattedDate}`,
+          createdAt: new Date(),
+        });
+      }
     }
 
     const updatedData: any = {
