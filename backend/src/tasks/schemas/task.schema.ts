@@ -18,26 +18,60 @@ export enum TaskPriority {
   NONE = 'none',
 }
 
-export interface SubtaskItem {
+@Schema({ _id: false })
+export class SubtaskItem {
+  @Prop({ required: true })
   id: string;
+
+  @Prop({ required: true, trim: true })
   title: string;
-  priority: string;
+
+  @Prop({
+    type: String,
+    enum: TaskPriority,
+    default: TaskPriority.MEDIUM,
+  })
+  priority: TaskPriority;
+
+  @Prop({ type: Date, default: null })
   dueDate?: Date;
+
+  @Prop({ default: 'Dexter' })
   assigneeName?: string;
 }
 
-export interface UpdateItem {
+export const SubtaskSchema = SchemaFactory.createForClass(SubtaskItem);
+
+@Schema({ _id: false })
+export class UpdateItem {
+  @Prop({ required: true })
   id: string;
+
+  @Prop({ required: true })
   text: string;
+
+  @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 }
 
-export interface CommentItem {
+export const UpdateSchema = SchemaFactory.createForClass(UpdateItem);
+
+@Schema({ _id: false })
+export class CommentItem {
+  @Prop({ required: true })
   id: string;
+
+  @Prop({ required: true })
   text: string;
+
+  @Prop({ default: 'Dexter' })
   authorName: string;
+
+  @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 }
+
+export const CommentSchema = SchemaFactory.createForClass(CommentItem);
 
 @Schema({ timestamps: true })
 export class Task {
@@ -65,13 +99,13 @@ export class Task {
   @Prop({ default: '' })
   projectId: string;
 
-  @Prop({ type: Array, default: [] })
+  @Prop({ type: [SubtaskSchema], default: [] })
   subtasks: SubtaskItem[];
 
-  @Prop({ type: Array, default: [] })
+  @Prop({ type: [UpdateSchema], default: [] })
   updates: UpdateItem[];
 
-  @Prop({ type: Array, default: [] })
+  @Prop({ type: [CommentSchema], default: [] })
   comments: CommentItem[];
 
   @Prop({ required: true, index: true })

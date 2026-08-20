@@ -33,4 +33,8 @@ export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @IsString()
+  @IsOptional()
+  guestUserId?: string;
 }
