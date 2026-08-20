@@ -146,9 +146,10 @@ export default function DashboardPage() {
     return true;
   });
 
-  if (!isGuestLoading && !guestUserId) {
-    return <GuestLoginModal />;
-  }
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => !prev);
+    setIsSidebarOpenMobile((prev) => !prev);
+  };
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-zinc-950 font-sans selection:bg-zinc-200">
@@ -160,6 +161,7 @@ export default function DashboardPage() {
         isOpenMobile={isSidebarOpenMobile}
         onCloseMobile={() => setIsSidebarOpenMobile(false)}
         isCollapsed={isSidebarCollapsed}
+        onToggleSidebar={handleToggleSidebar}
       />
 
       {/* Main Body Column */}
@@ -171,6 +173,7 @@ export default function DashboardPage() {
             task={selectedTask}
             onBack={() => setSelectedTask(null)}
             onRefresh={loadTasks}
+            onToggleSidebar={handleToggleSidebar}
           />
         ) : (
           <>
@@ -186,10 +189,8 @@ export default function DashboardPage() {
               onAddProjectClick={() => setShowAddProjectModal(true)}
               isProjectsView={selectedProjectId === 'projects_view'}
               selectedProjectName={selectedProjectName}
-              onToggleSidebar={() => {
-                setIsSidebarCollapsed((prev) => !prev);
-                setIsSidebarOpenMobile((prev) => !prev);
-              }}
+              onToggleSidebar={handleToggleSidebar}
+              isSidebarCollapsed={isSidebarCollapsed}
               visibleFields={visibleFields}
               setVisibleFields={setVisibleFields}
             />

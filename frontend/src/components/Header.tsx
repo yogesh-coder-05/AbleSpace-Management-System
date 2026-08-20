@@ -26,6 +26,7 @@ import {
   Tag,
   User,
   LogOut,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useColorMode } from '../context/ColorModeContext';
@@ -45,6 +46,7 @@ interface HeaderProps {
   isProjectsView?: boolean;
   selectedProjectName?: string | null;
   onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
   visibleFields: VisibleFields;
   setVisibleFields: React.Dispatch<React.SetStateAction<VisibleFields>>;
 }
@@ -61,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   isProjectsView = false,
   selectedProjectName,
   onToggleSidebar,
+  isSidebarCollapsed = false,
   visibleFields,
   setVisibleFields,
 }) => {
@@ -101,40 +104,70 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="w-full bg-white dark:bg-zinc-900 border-b border-zinc-200/80 dark:border-zinc-800 sticky top-0 z-30 font-sans selection:bg-zinc-200">
-      {/* Top Sidebar Toggle Bar with Vertical Line Divider matching exact Figma screenshot */}
-      <div className="px-4 sm:px-6 py-2 border-b border-zinc-200/60 dark:border-zinc-800/80 flex items-center gap-3">
+      {/* Top Sidebar Toggle Bar with Guest Profile (when sidebar is collapsed) and Vertical Line Divider */}
+      <div className="px-3 sm:px-6 py-2 border-b border-zinc-200/60 dark:border-zinc-800/80 flex items-center gap-2 sm:gap-3 overflow-x-auto selection:bg-none">
+        
+        {/* Guest Profile Button - Only visible when Sidebar is Collapsed / Hidden */}
+        {isSidebarCollapsed && (
+          <>
+            <div className="relative shrink-0">
+              <button
+                onClick={() => {
+                  setShowProfileMenu(!showProfileMenu);
+                  setShowThemeSubmenu(false);
+                  setShowColorSubmenu(false);
+                }}
+                className="flex items-center gap-1.5 p-1 px-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition select-none text-left"
+                title="Profile & Settings"
+              >
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-[10px] shadow-xs ring-1 ring-purple-200 dark:ring-purple-900 overflow-hidden shrink-0">
+                  <img src="/avatar.png" alt="User Avatar" className="w-full h-full object-cover" />
+                </div>
+                <span className="text-xs font-semibold text-zinc-900 dark:text-white tracking-tight shrink-0">
+                  {user?.name || 'Guest'}
+                </span>
+                <ChevronsUpDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              </button>
+            </div>
+
+            <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700 shrink-0" />
+          </>
+        )}
+
+        {/* Sidebar Toggle PanelLeft Icon Button */}
         <button
           onClick={onToggleSidebar}
-          className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+          className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition shrink-0"
           title="Toggle Sidebar"
         >
           <PanelLeft className="w-4 h-4" />
         </button>
-        <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
+
+        <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700 shrink-0" />
         
-        {/* Breadcrumbs matching exact Figma screenshot: Projects > Design Homepage */}
+        {/* Breadcrumbs: Projects > Design Homepage */}
         {selectedProjectName && selectedProjectName !== 'Projects' ? (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-medium select-none">
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-medium select-none whitespace-nowrap">
             <span className="hover:text-zinc-800 dark:hover:text-white transition">Projects</span>
-            <ChevronRight className="w-3 h-3 text-zinc-400" />
+            <ChevronRight className="w-3 h-3 text-zinc-400 shrink-0" />
             <span className="font-semibold text-zinc-900 dark:text-white">{selectedProjectName}</span>
           </div>
         ) : null}
       </div>
 
       {/* Main Header Action Bar matching exact Figma screenshot */}
-      <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Title: Tasks */}
-        <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
+        <h1 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight shrink-0">
           {selectedProjectName && selectedProjectName !== 'Projects' ? 'Tasks' : selectedProjectName ? selectedProjectName : 'Tasks'}
         </h1>
 
         {/* Right Controls matching Figma screenshot */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Expandable Search Button & Input Box matching exact Figma spec */}
           <div className="relative">
             {showSearchInput ? (
-              <div className="relative flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1.5 w-48 sm:w-64 transition-all focus-within:border-zinc-400 dark:focus-within:border-zinc-600 shadow-2xs">
+              <div className="relative flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2 py-1.5 w-36 sm:w-64 transition-all focus-within:border-zinc-400 dark:focus-within:border-zinc-600 shadow-2xs">
                 <Search className="w-4 h-4 text-zinc-400 shrink-0 mr-2" />
                 <input
                   ref={searchInputRef}
@@ -320,7 +353,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Priority Submenu Card matching exact Figma screenshot */}
                     {showPrioritySubmenu && (
-                      <div className="absolute right-full top-0 mr-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                      <div className="relative sm:absolute sm:right-full sm:top-0 sm:mr-2 mt-1 sm:mt-0 w-full sm:w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
                         <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                           Priority
                         </p>
@@ -488,7 +521,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setShowColorSubmenu(false);
                 }}
               />
-              <div className="absolute right-0 mt-2 w-[240px] h-[266px] min-w-[192px] bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans flex flex-col justify-between">
+              <div className="absolute right-0 mt-2 w-[220px] sm:w-[240px] max-w-[calc(100vw-24px)] min-h-[266px] bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-zinc-200/90 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans flex flex-col justify-between">
                 
                 {/* Centered Avatar Image & Email matching Figma screenshot */}
                 <div className="flex flex-col items-center justify-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
@@ -524,7 +557,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Theme Submenu Card - 100% Responsive */}
                     {showThemeSubmenu && (
-                      <div className="absolute right-full top-0 mr-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                      <div className="relative sm:absolute sm:right-full sm:top-0 sm:mr-2 mt-1 sm:mt-0 w-full sm:w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
                         <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                           Theme
                         </p>
@@ -579,7 +612,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Color Mode Submenu Card - 100% Responsive */}
                     {showColorSubmenu && (
-                      <div className="absolute right-full top-0 mr-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                      <div className="relative sm:absolute sm:right-full sm:top-0 sm:mr-2 mt-1 sm:mt-0 w-full sm:w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_12px_30px_-6px_rgba(0,0,0,0.18)] border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
                         <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                           Color Mode
                         </p>

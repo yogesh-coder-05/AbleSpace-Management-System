@@ -19,6 +19,7 @@ import {
   Square,
   Check,
   LogOut,
+  PanelLeft,
 } from 'lucide-react';
 import { useGuest } from '../context/GuestContext';
 
@@ -28,6 +29,7 @@ interface SidebarProps {
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   isCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile,
   isCollapsed = false,
+  onToggleSidebar,
 }) => {
   const pathname = usePathname();
   const { user, logoutGuest } = useGuest();
@@ -84,29 +87,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition cursor-pointer select-none"
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-purple-100 dark:ring-purple-950 overflow-hidden shrink-0">
                   <img src="/avatar.png" alt="User Avatar" className="w-full h-full object-cover" />
                 </div>
-                <span className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight">
-                  {user?.name || 'Dexter'}
+                <span className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight truncate">
+                  {user?.name || 'Guest'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1">
-                <ChevronsUpDown className="w-4 h-4 text-zinc-400" />
-                {/* Close Button on Mobile */}
-                {onCloseMobile && (
+              <div className="flex items-center gap-2 shrink-0">
+                <ChevronsUpDown className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div className="flex md:hidden items-center gap-1.5 shrink-0 pl-1">
+                  <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-700" />
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCloseMobile();
+                      if (onCloseMobile) onCloseMobile();
+                      if (onToggleSidebar) onToggleSidebar();
                     }}
-                    className="p-1 md:hidden text-zinc-400 hover:text-zinc-700 dark:hover:text-white"
+                    className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70 transition"
+                    title="Toggle Sidebar"
                   >
-                    <X className="w-4 h-4" />
+                    <PanelLeft className="w-4 h-4" />
                   </button>
-                )}
+                </div>
               </div>
             </div>
 
@@ -121,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setShowColorSubmenu(false);
                   }}
                 />
-                <div className="absolute top-full left-0 mt-1.5 w-full min-w-[220px] bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-sans space-y-3">
+                <div className="absolute top-full left-0 mt-1.5 w-full min-w-[200px] max-w-[calc(100vw-24px)] bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-sans space-y-3">
                   
                   {/* Centered Avatar Image & Email */}
                   <div className="flex flex-col items-center justify-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
@@ -157,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       {/* Theme Submenu Card */}
                       {showThemeSubmenu && (
-                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
+                        <div className="relative sm:absolute sm:left-full sm:top-0 sm:ml-2 mt-1 sm:mt-0 w-full sm:w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
                           <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                             Theme
                           </p>
@@ -212,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       {/* Color Mode Submenu Card */}
                       {showColorSubmenu && (
-                        <div className="absolute left-full top-0 ml-2 w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
+                        <div className="relative sm:absolute sm:left-full sm:top-0 sm:ml-2 mt-1 sm:mt-0 w-full sm:w-44 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-950/10 dark:shadow-black/50 border border-zinc-200/90 dark:border-zinc-800 p-3 z-50 animate-in fade-in slide-in-from-left-2 duration-150 font-sans">
                           <p className="text-xs text-zinc-400 font-normal px-1 pb-2">
                             Color Mode
                           </p>

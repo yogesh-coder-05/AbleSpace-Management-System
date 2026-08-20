@@ -8,6 +8,7 @@ import {
   Share2,
   MoreHorizontal,
   PanelRight,
+  PanelLeft,
   ChevronDown,
   ChevronUp,
   ChevronRight,
@@ -33,6 +34,7 @@ interface TaskDetailPageProps {
   task: Task;
   onBack: () => void;
   onRefresh: () => void;
+  onToggleSidebar?: () => void;
 }
 
 const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
@@ -81,6 +83,7 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
   task,
   onBack,
   onRefresh,
+  onToggleSidebar,
 }) => {
   const [currentPriority, setCurrentPriority] = useState<TaskPriority>(task.priority || 'high');
   const [currentStatus, setCurrentStatus] = useState<TaskStatus>(task.status || 'todo');
@@ -381,13 +384,25 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
     <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-zinc-200">
       {/* Top Header Action Bar matching Figma screenshot */}
       <div className="border-b border-zinc-200/80 dark:border-zinc-800 px-3 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md z-30">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Tasks</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+              title="Toggle Sidebar"
+            >
+              <PanelLeft className="w-4 h-4" />
+            </button>
+          )}
+          {onToggleSidebar && <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-0.5" />}
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Tasks</span>
+          </button>
+        </div>
 
         {/* Top Right Action Icons */}
         <div className="flex items-center gap-1.5">
