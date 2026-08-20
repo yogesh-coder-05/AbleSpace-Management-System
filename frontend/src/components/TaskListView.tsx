@@ -65,20 +65,17 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     (visibleFields.status ? 1 : 0) +
     (visibleFields.reporter ? 1 : 0);
 
-  if (tasks.length === 0) {
-    return (
-      <div className="p-12 text-center text-zinc-400 dark:text-zinc-500 text-xs font-medium">
-        No tasks found matching your search query.
-      </div>
-    );
-  }
+  const displayGroups = groups.filter((g) => {
+    if (g.status === 'on_hold') {
+      return tasks.some((t) => t.status === 'on_hold');
+    }
+    return true;
+  });
 
   return (
     <div className="p-6 space-y-6">
-      {groups.map((group) => {
+      {displayGroups.map((group) => {
         const groupTasks = tasks.filter((t) => t.status === group.status);
-        if (groupTasks.length === 0) return null;
-
         const isCollapsed = collapsed[group.status];
 
         return (

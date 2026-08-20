@@ -13,10 +13,13 @@ import { useGuest } from '../context/GuestContext';
 import { Task, TaskPriority, TaskStatus, VisibleFields } from '../types/task';
 import { fetchTasksApi, updateTaskApi } from '../lib/api';
 
+import { KanbanSkeleton, ListSkeleton } from '../components/SkeletonLoader';
+
 export default function DashboardPage() {
   const { guestUserId, user, isLoading: isGuestLoading } = useGuest();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | 'all'>('all');
@@ -41,12 +44,12 @@ export default function DashboardPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const loadTasks = async () => {
+    setIsTasksLoading(true);
     try {
       const data = await fetchTasksApi({
         guestUserId: guestUserId || undefined,
         search: searchQuery || undefined,
         priority: selectedPriority !== 'all' ? selectedPriority : undefined,
-        projectId: (selectedProjectId && selectedProjectId !== 'projects_view') ? selectedProjectId : undefined,
       });
       setTasks(data);
       setSelectedTask((prevSelected) => {
@@ -56,6 +59,8 @@ export default function DashboardPage() {
       });
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsTasksLoading(false);
     }
   };
 
@@ -63,7 +68,7 @@ export default function DashboardPage() {
     if (!isGuestLoading) {
       loadTasks();
     }
-  }, [guestUserId, searchQuery, selectedPriority, selectedProjectId, isGuestLoading]);
+  }, [guestUserId, searchQuery, selectedPriority, isGuestLoading]);
 
   const handleSelectProject = (id: string | null, name?: string | null) => {
     setSelectedProjectId(id);
@@ -71,8 +76,12 @@ export default function DashboardPage() {
       setSelectedProjectName(name);
     } else if (id === 'projects_view') {
       setSelectedProjectName('Projects');
-    } else if (id) {
+    } else if (id === 'proj_1') {
       setSelectedProjectName('Design Homepage');
+    } else if (id === 'proj_2') {
+      setSelectedProjectName('Develop Login Feature');
+    } else if (id === 'proj_3') {
+      setSelectedProjectName('Test Payment Gateway');
     } else {
       setSelectedProjectName(null);
     }
@@ -102,8 +111,18 @@ export default function DashboardPage() {
 
   const displayTasks = tasks.filter((t) => {
     if (selectedProjectId && selectedProjectId !== 'projects_view') {
-      if (t.projectId && t.projectId !== selectedProjectId) {
-        return false;
+      const projName = selectedProjectName?.toLowerCase().trim();
+      const hasExactProjId = t.projectId && t.projectId === selectedProjectId;
+      const matchesTitle = projName && t.title ? t.title.toLowerCase().includes(projName) : false;
+      const hasMatchingTasksInList = tasks.some(
+        (task) =>
+          (task.projectId && task.projectId === selectedProjectId) ||
+          (projName && task.title && task.title.toLowerCase().includes(projName))
+      );
+      if (hasMatchingTasksInList) {
+        if (!hasExactProjId && !matchesTitle) {
+          return false;
+        }
       }
     }
     if (searchQuery.trim()) {
@@ -175,14 +194,17 @@ export default function DashboardPage() {
               setVisibleFields={setVisibleFields}
             />
 
-            {/* View Content (Projects View vs Kanban Board vs Table List) */}
+            {/* View Content (Projects View vs Kanban Board vs Table List vs Skeleton) */}
             <main className="flex-1 overflow-x-auto overflow-y-auto">
               {selectedProjectId === 'projects_view' ? (
                 <ProjectsView
                   onSelectProject={(id, name) => handleSelectProject(id, name)}
                   showAddModal={showAddProjectModal}
                   setShowAddModal={setShowAddProjectModal}
+                  searchQuery={searchQuery}
                 />
+              ) : isTasksLoading ? (
+                viewMode === 'board' ? <KanbanSkeleton /> : <ListSkeleton />
               ) : viewMode === 'board' ? (
                 <KanbanBoard
                   tasks={displayTasks}

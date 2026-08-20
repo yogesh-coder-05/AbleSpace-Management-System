@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { SignalHigh, SignalMedium, Plus, FolderKanban, MoreHorizontal } from 'lucide-react';
 import { fetchProjectsApi, createProjectApi } from '../lib/api';
 import { useGuest } from '../context/GuestContext';
+import { ProjectsSkeleton } from './SkeletonLoader';
 
 interface ProjectItem {
   id: string;
@@ -17,14 +18,17 @@ interface ProjectsViewProps {
   onSelectProject: (id: string, name: string) => void;
   showAddModal?: boolean;
   setShowAddModal?: (open: boolean) => void;
+  searchQuery?: string;
 }
 
 export const ProjectsView: React.FC<ProjectsViewProps> = ({
   onSelectProject,
   showAddModal: externalShowAddModal,
   setShowAddModal: externalSetShowAddModal,
+  searchQuery = '',
 }) => {
   const { guestUserId } = useGuest();
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [projectsList, setProjectsList] = useState<ProjectItem[]>([
     {
       id: 'proj_1',
@@ -57,6 +61,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [newProjectDueDate, setNewProjectDueDate] = useState('30 Dec 2026');
 
   const loadProjects = async () => {
+    setIsProjectsLoading(true);
     try {
       const data = await fetchProjectsApi(guestUserId || 'guest_demo');
       if (Array.isArray(data) && data.length > 0) {
@@ -73,6 +78,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       }
     } catch (err) {
       console.error('Failed to load projects from backend API:', err);
+    } finally {
+      setIsProjectsLoading(false);
     }
   };
 
@@ -115,6 +122,20 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setShowAddModal(false);
   };
 
+  const displayProjects = projectsList.filter((proj) => {
+    if (!searchQuery || !searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      proj.name.toLowerCase().includes(q) ||
+      proj.priority.toLowerCase().includes(q) ||
+      proj.dueDate.toLowerCase().includes(q)
+    );
+  });
+
+  if (isProjectsLoading) {
+    return <ProjectsSkeleton />;
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 font-sans">
       
@@ -139,7 +160,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
         {/* Projects Rows matching exact Figma screenshot */}
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-          {projectsList.map((proj) => (
+          {displayProjects.map((proj) => (
             <div
               key={proj.id}
               onClick={() => onSelectProject(proj.id, proj.name)}
@@ -272,7 +293,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white dark:text-zinc-900 bg-[#171717] dark:bg-white hover:bg-black rounded-xl shadow-xs transition"
+                  className="px-4 py-2 text-xs font-semibold accent-btn rounded-xl shadow-xs transition"
                 >
                   Create Project
                 </button>

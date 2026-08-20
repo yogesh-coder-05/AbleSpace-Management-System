@@ -406,8 +406,8 @@ export const TaskDetailPage: React.FC<TaskDetailPageProps> = ({
           <button
             onClick={() => setShowRightPanel(!showRightPanel)}
             className={`p-1.5 rounded-lg border text-xs font-medium transition cursor-pointer ${showRightPanel
-                ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
-                : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+              ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
               }`}
             title="Side Panel (Details & Updates)"
           >

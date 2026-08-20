@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Task, Project, UserProfile, TaskStatus, TaskPriority } from '../types/task';
+import { Task, Project, UserProfile, TaskStatus, TaskPriority, SubtaskItem, CommentItem } from '../types/task';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -130,6 +130,11 @@ export const addSubtaskApi = async (
 ): Promise<Task> => {
   try {
     const res = await api.post(`/tasks/${taskId}/subtasks`, subtask);
+    const taskInFallback = fallbackTasksStore.find((t) => t._id === taskId);
+    if (taskInFallback) {
+      taskInFallback.subtasks = res.data.subtasks || taskInFallback.subtasks;
+      taskInFallback.updates = res.data.updates || taskInFallback.updates;
+    }
     return res.data;
   } catch (err) {
     const newSub: SubtaskItem = {

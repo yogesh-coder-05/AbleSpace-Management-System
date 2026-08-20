@@ -620,11 +620,11 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Black Pill Button (Add Project in Projects View, Add Task in Tasks View) */}
+        {/* Action Button (Add Project in Projects View, Add Task in Tasks View) */}
         {isProjectsView ? (
           <button
             onClick={onAddProjectClick}
-            className="py-1.5 px-3.5 bg-[#09090B] hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
+            className="py-1.5 px-3.5 accent-btn text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
             <span>Add Project</span>
@@ -632,7 +632,7 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <button
             onClick={onAddTaskClick}
-            className="py-1.5 px-3.5 bg-[#09090B] hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
+            className="py-1.5 px-3.5 accent-btn text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
             <span>Add Task</span>
