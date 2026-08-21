@@ -23,7 +23,7 @@ import { updateUserProfileApi } from '../../../lib/api';
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
-  const { user, setUser, guestUserId, logoutGuest } = useGuest();
+  const { user, setUser, guestUserId, isLoading, logoutGuest } = useGuest();
   const { theme, toggleTheme } = useTheme();
   const { colorMode, setColorMode } = useColorMode();
 
@@ -36,6 +36,13 @@ export default function ProfileSettingsPage() {
   const [username, setUsername] = useState(user?.username || 'Dexuser');
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Protected route check - Redirect unauthenticated guests to '/'
+  useEffect(() => {
+    if (!isLoading && !guestUserId) {
+      router.replace('/');
+    }
+  }, [isLoading, guestUserId, router]);
 
   useEffect(() => {
     if (user) {
@@ -65,9 +72,18 @@ export default function ProfileSettingsPage() {
     }
   };
 
+  const [isLeavingWorkspace, setIsLeavingWorkspace] = useState(false);
+
   const handleLeaveWorkspace = async () => {
-    await logoutGuest();
-    router.push('/');
+    setIsLeavingWorkspace(true);
+    try {
+      await logoutGuest();
+      router.push('/');
+    } catch (err) {
+      console.error('Leave workspace failed:', err);
+    } finally {
+      setIsLeavingWorkspace(false);
+    }
   };
 
   const colorOptions: { mode: ColorMode; label: string; colorClass: string }[] = [
@@ -78,6 +94,21 @@ export default function ProfileSettingsPage() {
     { mode: 'emerald', label: 'Emerald', colorClass: 'bg-[#059669]' },
     { mode: 'black', label: 'Black', colorClass: 'bg-slate-900 dark:bg-slate-100' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] dark:bg-slate-950 flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-slate-300 dark:border-slate-700 border-t-slate-900 dark:border-t-white rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading settings...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!guestUserId) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-slate-950 flex font-sans selection:bg-slate-200">
@@ -312,9 +343,10 @@ export default function ProfileSettingsPage() {
                 <button
                   type="button"
                   onClick={handleLeaveWorkspace}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60 transition cursor-pointer"
+                  disabled={isLeavingWorkspace}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60 transition cursor-pointer disabled:opacity-50"
                 >
-                  Leave Workspace
+                  {isLeavingWorkspace ? 'Leaving...' : 'Leave Workspace'}
                 </button>
               </div>
             </div>

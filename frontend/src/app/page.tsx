@@ -151,6 +151,21 @@ export default function DashboardPage() {
     setIsSidebarOpenMobile((prev) => !prev);
   };
 
+  if (isGuestLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F4F6] dark:bg-zinc-950 font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-zinc-400 dark:border-zinc-600 border-t-zinc-900 dark:border-t-white rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Loading workspace...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!guestUserId) {
+    return <GuestLoginModal />;
+  }
+
   return (
     <div className="min-h-screen flex bg-white dark:bg-zinc-950 font-sans selection:bg-zinc-200">
       

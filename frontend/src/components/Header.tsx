@@ -107,33 +107,6 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Sidebar Toggle Bar with Guest Profile (when sidebar is collapsed) and Vertical Line Divider */}
       <div className="px-3 sm:px-6 py-2 border-b border-zinc-200/60 dark:border-zinc-800/80 flex items-center gap-2 sm:gap-3 overflow-x-auto selection:bg-none">
         
-        {/* Guest Profile Button - Only visible when Sidebar is Collapsed / Hidden */}
-        {isSidebarCollapsed && (
-          <>
-            <div className="relative shrink-0">
-              <button
-                onClick={() => {
-                  setShowProfileMenu(!showProfileMenu);
-                  setShowThemeSubmenu(false);
-                  setShowColorSubmenu(false);
-                }}
-                className="flex items-center gap-1.5 p-1 px-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition select-none text-left"
-                title="Profile & Settings"
-              >
-                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-[10px] shadow-xs ring-1 ring-purple-200 dark:ring-purple-900 overflow-hidden shrink-0">
-                  <img src="/avatar.png" alt="User Avatar" className="w-full h-full object-cover" />
-                </div>
-                <span className="text-xs font-semibold text-zinc-900 dark:text-white tracking-tight shrink-0">
-                  {user?.name || 'Guest'}
-                </span>
-                <ChevronsUpDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-              </button>
-            </div>
-
-            <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700 shrink-0" />
-          </>
-        )}
-
         {/* Sidebar Toggle PanelLeft Icon Button */}
         <button
           onClick={onToggleSidebar}
@@ -143,7 +116,9 @@ export const Header: React.FC<HeaderProps> = ({
           <PanelLeft className="w-4 h-4" />
         </button>
 
-        <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700 shrink-0" />
+        {selectedProjectName && selectedProjectName !== 'Projects' && (
+          <div className="h-3.5 w-[1px] bg-zinc-200 dark:bg-zinc-700 shrink-0" />
+        )}
         
         {/* Breadcrumbs: Projects > Design Homepage */}
         {selectedProjectName && selectedProjectName !== 'Projects' ? (
